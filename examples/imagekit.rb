@@ -9,11 +9,7 @@ Imagekit::Rails.configure do |config|
   # You can find this in your ImageKit dashboard at https://imagekit.io/dashboard/url-endpoints
   config.url_endpoint = ENV.fetch('IMAGEKIT_URL_ENDPOINT', 'https://ik.imagekit.io/your_imagekit_id')
 
-  # Optional: Your ImageKit public key (required for client-side uploads)
-  # You can find this in your ImageKit dashboard at https://imagekit.io/dashboard/developer/api-keys
-  config.public_key = ENV['IMAGEKIT_PUBLIC_KEY']
-
-  # Optional: Your ImageKit private key (required for server-side operations and signed URLs)
+  # Optional: Your ImageKit private key (required for signed URLs)
   # IMPORTANT: Never expose your private key in client-side code
   config.private_key = ENV['IMAGEKIT_PRIVATE_KEY']
 

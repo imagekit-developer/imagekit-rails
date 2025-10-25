@@ -13,7 +13,6 @@ RSpec.describe Imagekit::Rails::Helper do
     Imagekit::Rails.configure do |config|
       config.url_endpoint = 'https://ik.imagekit.io/test_account'
       config.private_key = 'private_test_key'
-      config.public_key = 'public_test_key'
       # Use defaults: responsive = true, device_breakpoints = [640, 750, 828, 1080, 1200, 1920, 2048, 3840]
     end
   end

@@ -22,17 +22,16 @@ Create an initializer at `config/initializers/imagekit.rb`:
 
 ```ruby
 Imagekit::Rails.configure do |config|
-  config.url_endpoint = "https://ik.imagekit.io/your_imagekit_id"
-  config.public_key = ENV['IMAGEKIT_PUBLIC_KEY']
+  config.url_endpoint = ENV['IMAGEKIT_URL_ENDPOINT']
   config.private_key = ENV['IMAGEKIT_PRIVATE_KEY']
 end
+```
 ```
 
 Or set environment variables:
 
 ```bash
 IMAGEKIT_URL_ENDPOINT=https://ik.imagekit.io/your_imagekit_id
-IMAGEKIT_PUBLIC_KEY=your_public_key
 IMAGEKIT_PRIVATE_KEY=your_private_key
 ```
 

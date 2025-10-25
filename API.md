@@ -291,7 +291,6 @@ Imagekit::Rails.configure do |config|
   config.url_endpoint = "https://ik.imagekit.io/your_imagekit_id"
   
   # Optional
-  config.public_key = ENV['IMAGEKIT_PUBLIC_KEY']
   config.private_key = ENV['IMAGEKIT_PRIVATE_KEY']
   config.transformation_position = :query
   config.responsive = true
@@ -302,5 +301,4 @@ end
 
 Or use environment variables:
 - `IMAGEKIT_URL_ENDPOINT`
-- `IMAGEKIT_PUBLIC_KEY`
 - `IMAGEKIT_PRIVATE_KEY`

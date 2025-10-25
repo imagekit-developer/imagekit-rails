@@ -40,23 +40,17 @@ bundle install
 Create an initializer at `config/initializers/imagekit.rb`:
 
 ```ruby
+# config/initializers/imagekit.rb
 Imagekit::Rails.configure do |config|
-  config.url_endpoint = "https://ik.imagekit.io/your_imagekit_id"
-  config.public_key = ENV['IMAGEKIT_PUBLIC_KEY']
+  config.url_endpoint = ENV['IMAGEKIT_URL_ENDPOINT']
   config.private_key = ENV['IMAGEKIT_PRIVATE_KEY']
-  
-  # Optional: Configure default settings
-  config.transformation_position = :query  # or :path
-  config.responsive = true
-  config.device_breakpoints = [640, 750, 828, 1080, 1200, 1920, 2048, 3840]
-  config.image_breakpoints = [16, 32, 48, 64, 96, 128, 256, 384]
 end
+```
 ```
 
 You can also set these values via environment variables:
 - `IMAGEKIT_URL_ENDPOINT`
-- `IMAGEKIT_PUBLIC_KEY`
-- `IMAGEKIT_PRIVATE_KEY`
+- `IMAGEKIT_PRIVATE_KEY` (only required if using signed URLs)
 
 ## Usage
 
@@ -442,9 +436,8 @@ Imagekit::Rails.configure do |config|
   # Required
   config.url_endpoint = "https://ik.imagekit.io/your_imagekit_id"
   
-  # Optional for server-side operations
+  # Optional for signed URLs
   config.private_key = ENV['IMAGEKIT_PRIVATE_KEY']
-  config.public_key = ENV['IMAGEKIT_PUBLIC_KEY']
   
   # Default transformation position (:query or :path)
   config.transformation_position = :query

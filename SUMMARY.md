@@ -61,10 +61,10 @@ gem 'imagekit-rails'
 ```ruby
 # config/initializers/imagekit.rb
 Imagekit::Rails.configure do |config|
-  config.url_endpoint = "https://ik.imagekit.io/your_imagekit_id"
-  config.public_key = ENV['IMAGEKIT_PUBLIC_KEY']
+  config.url_endpoint = ENV['IMAGEKIT_URL_ENDPOINT']
   config.private_key = ENV['IMAGEKIT_PRIVATE_KEY']
 end
+```
 ```
 
 ## Usage Examples
@@ -114,7 +114,6 @@ end
 
 ### Global (Initializer)
 - `url_endpoint` - Your ImageKit URL endpoint (required)
-- `public_key` - Public API key (optional)
 - `private_key` - Private API key (optional, for signed URLs)
 - `transformation_position` - :query or :path (default: :query)
 - `responsive` - Enable/disable responsive images (default: true)
