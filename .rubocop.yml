@@ -1,0 +1,59 @@
+AllCops:
+  NewCops: enable
+  TargetRubyVersion: 3.0
+
+# Disable filename check since imagekit-rails.rb is intentional
+Naming/FileName:
+  Exclude:
+    - 'lib/imagekit-rails.rb'
+
+# Allow longer lines in specs for readability
+Layout/LineLength:
+  Max: 150
+  Exclude:
+    - 'spec/**/*'
+    - 'imagekit-rails.gemspec'
+
+# Allow longer blocks in specs
+Metrics/BlockLength:
+  Exclude:
+    - 'spec/**/*'
+    - 'Rakefile'
+
+# Allow longer methods for the two main helper methods
+Metrics/MethodLength:
+  Exclude:
+    - 'lib/imagekit/rails/helper.rb'
+
+# Allow higher complexity for the two main helper methods
+Metrics/AbcSize:
+  Exclude:
+    - 'lib/imagekit/rails/helper.rb'
+
+Metrics/CyclomaticComplexity:
+  Exclude:
+    - 'lib/imagekit/rails/helper.rb'
+
+Metrics/PerceivedComplexity:
+  Exclude:
+    - 'lib/imagekit/rails/helper.rb'
+
+# Allow longer modules for the main helper module
+Metrics/ModuleLength:
+  Exclude:
+    - 'lib/imagekit/rails/helper.rb'
+
+# Documentation is provided in README and inline comments
+Style/Documentation:
+  Enabled: false
+
+# Examples are for demonstration, don't enforce strict Ruby style
+Style/OpenStructUse:
+  Exclude:
+    - 'examples/**/*'
+
+Style/FetchEnvVar:
+  Enabled: false
+
+Gemspec/DevelopmentDependencies:
+  Enabled: false

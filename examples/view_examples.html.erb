@@ -1,0 +1,247 @@
+# Example Rails View Using ImageKit Helpers
+#
+# This file demonstrates various ways to use the ik_image_tag helper
+# Place this in app/views/your_controller/your_action.html.erb
+
+<!DOCTYPE html>
+<html>
+<head>
+  <title>ImageKit Rails Examples</title>
+  <style>
+    .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+    .example { margin: 40px 0; padding: 20px; border: 1px solid #ddd; }
+    .example h2 { margin-top: 0; }
+    .gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px; }
+    .product-card { border: 1px solid #eee; padding: 10px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>ImageKit Rails Examples</h1>
+
+    <!-- Example 1: Basic Image -->
+    <div class="example">
+      <h2>1. Basic Image</h2>
+      <%= ik_image_tag("/sample-image.jpg", alt: "Sample Image") %>
+    </div>
+
+    <!-- Example 2: Responsive Image with Sizes -->
+    <div class="example">
+      <h2>2. Responsive Image</h2>
+      <%= ik_image_tag(
+        "/sample-image.jpg",
+        width: 800,
+        sizes: "(max-width: 600px) 100vw, 800px",
+        alt: "Responsive Image",
+        class: "img-fluid"
+      ) %>
+    </div>
+
+    <!-- Example 3: Image with Transformations -->
+    <div class="example">
+      <h2>3. Image with Transformations</h2>
+      <%= ik_image_tag(
+        "/sample-image.jpg",
+        transformation: [
+          { width: 400, height: 300, crop: "at_max" },
+          { quality: 85 },
+          { radius: 10 }
+        ],
+        alt: "Transformed Image"
+      ) %>
+    </div>
+
+    <!-- Example 4: Text Overlay -->
+    <div class="example">
+      <h2>4. Text Overlay</h2>
+      <%= ik_image_tag(
+        "/background.jpg",
+        transformation: [{
+          overlay: {
+            type: "text",
+            text: "Hello ImageKit!",
+            transformation: [
+              { 
+                fontSize: 60, 
+                fontColor: "FFFFFF",
+                fontFamily: "Arial",
+                background: "00000080"
+              }
+            ],
+            position: { focus: "center" }
+          }
+        }],
+        alt: "Image with text overlay",
+        width: 800
+      ) %>
+    </div>
+
+    <!-- Example 5: Image Overlay (Logo) -->
+    <div class="example">
+      <h2>5. Image Overlay (Logo)</h2>
+      <%= ik_image_tag(
+        "/product-photo.jpg",
+        transformation: [{
+          overlay: {
+            type: "image",
+            input: "logo.png",
+            transformation: [
+              { width: 100, height: 100 }
+            ],
+            position: { x: 10, y: 10 }
+          }
+        }],
+        alt: "Product with logo",
+        width: 600
+      ) %>
+    </div>
+
+    <!-- Example 6: AI Background Removal -->
+    <div class="example">
+      <h2>6. AI Background Removal</h2>
+      <%= ik_image_tag(
+        "/person-photo.jpg",
+        transformation: [
+          { aiRemoveBackground: true },
+          { width: 400 }
+        ],
+        alt: "Person with background removed"
+      ) %>
+    </div>
+
+    <!-- Example 7: Multiple Chained Transformations -->
+    <div class="example">
+      <h2>7. Multiple Chained Transformations</h2>
+      <%= ik_image_tag(
+        "/sample-image.jpg",
+        transformation: [
+          { width: 400, height: 400, crop: "at_max" },
+          { rotation: 45 },
+          { border: "5_FF0000" },
+          { radius: 20 }
+        ],
+        alt: "Multiple transformations"
+      ) %>
+    </div>
+
+    <!-- Example 8: Product Gallery -->
+    <div class="example">
+      <h2>8. Product Gallery</h2>
+      <div class="gallery">
+        <% @products.each do |product| %>
+          <div class="product-card">
+            <%= ik_image_tag(
+              product.image_path,
+              transformation: [
+                { width: 300, height: 300, crop: "at_max" },
+                { quality: 80 }
+              ],
+              alt: product.name,
+              class: "product-image",
+              loading: "lazy",
+              data: { product_id: product.id }
+            ) %>
+            <h3><%= product.name %></h3>
+            <p><%= number_to_currency(product.price) %></p>
+          </div>
+        <% end %>
+      </div>
+    </div>
+
+    <!-- Example 9: Profile Avatar with Circular Crop -->
+    <div class="example">
+      <h2>9. Profile Avatar</h2>
+      <%= ik_image_tag(
+        @current_user.avatar_path,
+        transformation: [
+          { width: 200, height: 200, crop: "at_max" },
+          { radius: "max" },
+          { border: "3_0066CC" }
+        ],
+        alt: @current_user.name,
+        class: "avatar"
+      ) %>
+    </div>
+
+    <!-- Example 10: Eager Loading (Above the Fold) -->
+    <div class="example">
+      <h2>10. Eager Loading (Above the Fold)</h2>
+      <%= ik_image_tag(
+        "/hero-image.jpg",
+        transformation: [
+          { width: 1920, height: 600, crop: "at_max" },
+          { quality: 90 }
+        ],
+        alt: "Hero Image",
+        loading: "eager",
+        class: "hero-image"
+      ) %>
+    </div>
+
+    <!-- Example 11: Signed URL for Private Content -->
+    <div class="example">
+      <h2>11. Signed URL (Expires in 1 hour)</h2>
+      <%= ik_image_tag(
+        "/private/secure-image.jpg",
+        signed: true,
+        expires_in: 3600,
+        transformation: [{ width: 500 }],
+        alt: "Secure Image"
+      ) %>
+    </div>
+
+    <!-- Example 12: Custom Breakpoints -->
+    <div class="example">
+      <h2>12. Custom Breakpoints</h2>
+      <%= ik_image_tag(
+        "/sample-image.jpg",
+        width: 800,
+        device_breakpoints: [320, 640, 768, 1024, 1280],
+        sizes: "(max-width: 768px) 100vw, 50vw",
+        alt: "Custom breakpoints"
+      ) %>
+    </div>
+
+    <!-- Example 13: URL Generation (without image tag) -->
+    <div class="example">
+      <h2>13. URL Generation</h2>
+      <% image_url = ik_url("/sample-image.jpg", transformation: [{ width: 400 }]) %>
+      <a href="<%= image_url %>" target="_blank">View Image</a>
+      <p>URL: <%= image_url %></p>
+    </div>
+
+    <!-- Example 14: Disable Responsive Images -->
+    <div class="example">
+      <h2>14. Disable Responsive Images</h2>
+      <%= ik_image_tag(
+        "/sample-image.jpg",
+        responsive: false,
+        transformation: [{ width: 600 }],
+        alt: "Non-responsive image"
+      ) %>
+    </div>
+
+    <!-- Example 15: AI Upscaling -->
+    <div class="example">
+      <h2>15. AI Upscaling</h2>
+      <%= ik_image_tag(
+        "/low-res-photo.jpg",
+        transformation: [
+          { aiUpscale: true },
+          { width: 800 }
+        ],
+        alt: "AI upscaled image"
+      ) %>
+    </div>
+
+  </div>
+
+  <!-- Example 16: Authentication Parameters for Client-Side Upload -->
+  <script>
+    // Get authentication parameters for client-side upload
+    const authParams = <%= raw ik_auth_params.to_json %>;
+    console.log('Auth params:', authParams);
+    // Use these with ImageKit JavaScript SDK for file uploads
+  </script>
+</body>
+</html>
