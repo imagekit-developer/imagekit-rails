@@ -134,7 +134,9 @@ module Imagekit
           # Use the generated attributes
           img_attributes[:src] = responsive_attrs.src
           img_attributes[:srcset] = responsive_attrs.src_set if responsive_attrs.src_set
-          img_attributes[:sizes] = responsive_attrs.sizes if responsive_attrs.sizes
+          # Use hash accessor to avoid type conversion error on nil values
+          sizes_value = responsive_attrs[:sizes]
+          img_attributes[:sizes] = sizes_value if sizes_value
         else
           # Non-responsive: just build a simple URL
           src_options = Imagekit::Models::SrcOptions.new(
