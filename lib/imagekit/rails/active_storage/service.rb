@@ -52,13 +52,18 @@ module Imagekit
             folder_path = ::File.dirname(key)
             file_name = filename || ::File.basename(key)
 
-            # Upload to ImageKit - the key determines the full path
-            @client.files.upload(
+            # Build upload parameters
+            upload_params = {
               file: content,
               file_name: file_name,
-              folder: folder_path == '.' ? nil : folder_path,
               use_unique_file_name: false
-            )
+            }
+
+            # Only include folder if there is one (don't pass nil or '.')
+            upload_params[:folder] = folder_path unless folder_path == '.'
+
+            # Upload to ImageKit - the key determines the full path
+            @client.files.upload(**upload_params)
 
             # Active Storage doesn't use the response, it tracks files by the key parameter
           end
