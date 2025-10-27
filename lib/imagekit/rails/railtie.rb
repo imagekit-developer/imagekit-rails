@@ -11,6 +11,13 @@ module Imagekit
         end
       end
 
+      # Register Active Storage service
+      initializer 'imagekit-rails.active_storage' do
+        ActiveSupport.on_load(:active_storage_blob) do
+          require 'imagekit/rails/active_storage/attached_extensions'
+        end
+      end
+
       # Load configuration from Rails initializer if it exists
       config.before_configuration do
         config_file = ::Rails.root.join('config', 'imagekit.rb')
