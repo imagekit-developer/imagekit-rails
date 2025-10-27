@@ -69,7 +69,7 @@ module Imagekit
 
             # Active Storage doesn't use the response, it tracks files by the key parameter
           end
-        rescue Imagekit::Errors::BaseError => e
+        rescue Imagekit::Errors::Error => e
           raise ::ActiveStorage::IntegrityError, "Upload failed: #{e.message}"
         end
 
