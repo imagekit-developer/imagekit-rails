@@ -47,22 +47,17 @@ module Imagekit
             io.rewind if io.respond_to?(:rewind)
 
             # Upload to ImageKit
-            response = @client.file.upload(
+            response = @client.files.upload(
               file: content,
               file_name: filename || ::File.basename(key),
               folder: folder_for(key),
-              use_unique_file_name: false,
-              tags: ['active_storage'],
-              custom_metadata: custom_metadata.merge(
-                checksum: checksum,
-                content_type: content_type
-              ).compact
+              use_unique_file_name: false
             )
 
             # Store the file_id for later retrieval
             response
           end
-        rescue Imagekit::Error => e
+        rescue Imagekit::Errors::BaseError => e
           raise ::ActiveStorage::IntegrityError, "Upload failed: #{e.message}"
         end
 
@@ -109,9 +104,9 @@ module Imagekit
           instrument :delete, key: key do
             # Find the file by name/path
             file = find_file(key)
-            @client.file.delete(file_id: file.file_id) if file
+            @client.files.delete(file_id: file.file_id) if file
           end
-        rescue Imagekit::Error
+        rescue Imagekit::Errors::BaseError
           # File might not exist, which is fine for delete
           true
         end
@@ -123,13 +118,13 @@ module Imagekit
           instrument :delete_prefixed, prefix: prefix do
             # List all files with the prefix
             folder_path = folder_for(prefix)
-            files = @client.file.list(path: folder_path)
+            files = @client.assets.list(path: folder_path)
 
             files.each do |file|
-              @client.file.delete(file_id: file.file_id)
+              @client.files.delete(file_id: file.file_id) if file.respond_to?(:file_id)
             end
           end
-        rescue Imagekit::Error
+        rescue Imagekit::Errors::BaseError
           # Ignore errors during bulk delete
           true
         end
@@ -145,7 +140,7 @@ module Imagekit
             payload[:exist] = answer
             answer
           end
-        rescue Imagekit::Error
+        rescue Imagekit::Errors::BaseError
           false
         end
 
@@ -223,7 +218,7 @@ module Imagekit
           folder_path = folder_for(key)
           filename = ::File.basename(key)
 
-          files = @client.file.list(
+          files = @client.assets.list(
             path: folder_path,
             search_query: "name:\"#{filename}\""
           )
