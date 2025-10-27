@@ -195,7 +195,7 @@ Files will be stored with Active Storage's automatic keys:
 - `production/uploads/abc123xyz456/avatar.jpg`
 - `production/uploads/def789uvw012/photo.png`
 
-**Note:** If you need custom folder structures per model (like `users/123/avatar`), consider using [CarrierWave](CARRIERWAVE.md) instead, which provides explicit `store_dir` control.
+**Note:** ImageKit service stores files with their blob key. You can customize the folder structure by configuring the `folder` option in your storage.yml.
 
 ### Variants (Active Storage Processing)
 

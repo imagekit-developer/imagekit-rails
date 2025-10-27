@@ -14,7 +14,7 @@ module Imagekit
       # Load configuration from Rails initializer if it exists
       config.before_configuration do
         config_file = ::Rails.root.join('config', 'imagekit.rb')
-        load config_file if File.exist?(config_file)
+        load config_file if ::File.exist?(config_file)
       end
     end
   end

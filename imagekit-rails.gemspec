@@ -8,8 +8,8 @@ Gem::Specification.new do |spec|
   spec.authors = ['ImageKit']
   spec.email = ['support@imagekit.io']
 
-  spec.summary = 'ImageKit Rails integration with view helpers, Active Storage, and CarrierWave support'
-  spec.description = 'Comprehensive Rails integration for ImageKit.io with view helpers (ik_image_tag, ik_video_tag), Active Storage service adapter, and CarrierWave storage. Provides easy image optimization, transformation, and responsive image support.'
+  spec.summary = 'ImageKit Rails integration with view helpers and Active Storage support'
+  spec.description = 'Comprehensive Rails integration for ImageKit.io with view helpers (ik_image_tag, ik_video_tag) and Active Storage service adapter. Provides easy image optimization, transformation, and responsive image support.'
   spec.homepage = 'https://github.com/imagekit-developer/imagekit-rails'
   spec.license = 'MIT'
   spec.required_ruby_version = '>= 3.0.0'

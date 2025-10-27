@@ -1,4 +1,4 @@
-# ImageKit Rails
+# ImageKit Rails (WIP - Do not use)
 
 Rails view helpers for [ImageKit.io](https://imagekit.io) - simple `ik_image_tag` and `ik_video_tag` helpers similar to the ImageKit React SDK.
 

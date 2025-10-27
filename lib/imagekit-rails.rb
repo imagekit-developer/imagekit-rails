@@ -12,9 +12,6 @@ if defined?(ActiveStorage)
   require_relative 'imagekit/rails/active_storage/attached_extensions'
 end
 
-# Load CarrierWave integration if CarrierWave is available
-require_relative 'imagekit/rails/carrierwave/storage' if defined?(CarrierWave)
-
 module Imagekit
   module Rails
     class Error < StandardError; end
