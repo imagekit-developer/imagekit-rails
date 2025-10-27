@@ -182,14 +182,6 @@ module Imagekit
 
         private
 
-        def path_for(key)
-          if folder
-            "#{folder}/#{key}"
-          else
-            key
-          end
-        end
-
         def folder_for(key)
           if folder
             path = "#{folder}/#{key}"
@@ -200,7 +192,9 @@ module Imagekit
         end
 
         def url_for_key(key, expires_in: nil, transformation: nil)
-          path = path_for(key)
+          # Build the full file path including the folder
+          # The key is just the blob identifier, we need to prepend the folder
+          path = folder ? "#{folder}/#{key}" : key
 
           src_options = Imagekit::Models::SrcOptions.new(
             src: path,
