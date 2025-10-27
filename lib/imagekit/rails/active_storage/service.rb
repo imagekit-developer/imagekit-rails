@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require 'active_storage/service'
+require 'tempfile'
 
 module Imagekit
   module Rails
@@ -87,6 +88,44 @@ module Imagekit
               url = url_for_key(key)
               response = Net::HTTP.get_response(URI(url))
               response.body
+            end
+          end
+        end
+
+        # Override open to skip checksum verification for ImageKit
+        #
+        # ImageKit may serve optimized versions of files (format conversion, compression, etc.),
+        # which causes the checksum to differ from the originally uploaded file.
+        # This is safe because:
+        # 1. ImageKit is a trusted CDN service
+        # 2. Files are served over HTTPS
+        # 3. The optimization is intentional behavior
+        #
+        # Note: This method is called by ActiveStorage when processing variants or
+        # when blob.open is called (e.g., for image processing).
+        #
+        # @param key [String] The unique identifier for the file
+        # @param checksum [String] The expected checksum (ignored for ImageKit)
+        # @param name [String] Prefix for the temporary file
+        # @param tmpdir [String] Directory for the temporary file
+        def open(key, checksum:, name: 'ActiveStorage-', tmpdir: nil, **)
+          instrument :open, key: key, checksum: checksum do
+            # Create a temporary file to download into
+            tempfile = Tempfile.open([name, ::File.extname(name)], tmpdir || Dir.tmpdir, binmode: true)
+
+            begin
+              # Download the file without checksum verification
+              download(key) do |chunk|
+                tempfile.write(chunk)
+              end
+
+              tempfile.rewind
+
+              # Yield the tempfile to the caller
+              yield tempfile
+            ensure
+              # Always clean up the tempfile
+              tempfile.close!
             end
           end
         end

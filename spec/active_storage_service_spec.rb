@@ -204,6 +204,94 @@ RSpec.describe Imagekit::Rails::ActiveStorage::Service do
     end
   end
 
+  describe '#open' do
+    let(:key) { 'uploads/test/file.jpg' }
+    let(:url) { 'https://ik.imagekit.io/test_account/uploads/test/file.jpg' }
+    let(:checksum) { 'abc123' }
+
+    before do
+      allow(mock_helper).to receive(:build_url).and_return(url)
+    end
+
+    it 'downloads file to tempfile and yields it' do
+      http = instance_double(Net::HTTP)
+      request = instance_double(Net::HTTP::Get)
+      response = instance_double(Net::HTTPResponse)
+
+      allow(Net::HTTP).to receive(:start).and_yield(http)
+      allow(Net::HTTP::Get).to receive(:new).and_return(request)
+      allow(http).to receive(:request).and_yield(response)
+      allow(response).to receive(:read_body).and_yield('file').and_yield(' content')
+
+      result = nil
+      service.open(key, checksum: checksum) do |tempfile|
+        result = tempfile.read
+      end
+
+      expect(result).to eq('file content')
+    end
+
+    it 'ignores checksum parameter (no verification)' do
+      http = instance_double(Net::HTTP)
+      request = instance_double(Net::HTTP::Get)
+      response = instance_double(Net::HTTPResponse)
+
+      allow(Net::HTTP).to receive(:start).and_yield(http)
+      allow(Net::HTTP::Get).to receive(:new).and_return(request)
+      allow(http).to receive(:request).and_yield(response)
+      allow(response).to receive(:read_body).and_yield('content')
+
+      # Should not raise error even with wrong checksum
+      expect do
+        service.open(key, checksum: 'wrong_checksum') { |_f| nil }
+      end.not_to raise_error
+    end
+
+    it 'cleans up tempfile after use' do
+      http = instance_double(Net::HTTP)
+      request = instance_double(Net::HTTP::Get)
+      response = instance_double(Net::HTTPResponse)
+
+      allow(Net::HTTP).to receive(:start).and_yield(http)
+      allow(Net::HTTP::Get).to receive(:new).and_return(request)
+      allow(http).to receive(:request).and_yield(response)
+      allow(response).to receive(:read_body).and_yield('content')
+
+      tempfile_path = nil
+      service.open(key, checksum: checksum) do |tempfile|
+        tempfile_path = tempfile.path
+        expect(File.exist?(tempfile_path)).to be true
+      end
+
+      # Tempfile should be closed and deleted after block
+      expect(File.exist?(tempfile_path)).to be false
+    end
+
+    it 'instruments the open operation' do
+      http = instance_double(Net::HTTP)
+      request = instance_double(Net::HTTP::Get)
+      response = instance_double(Net::HTTPResponse)
+
+      allow(Net::HTTP).to receive(:start).and_yield(http)
+      allow(Net::HTTP::Get).to receive(:new).and_return(request)
+      allow(http).to receive(:request).and_yield(response)
+      allow(response).to receive(:read_body).and_yield('content')
+
+      # The open method instruments both 'open' and 'streaming_download' (via download)
+      expect(ActiveSupport::Notifications).to receive(:instrument).with(
+        'service_open.active_storage',
+        hash_including(key: key, checksum: checksum, service: :imagekit)
+      ).and_call_original
+
+      expect(ActiveSupport::Notifications).to receive(:instrument).with(
+        'service_streaming_download.active_storage',
+        hash_including(key: key, service: :imagekit)
+      ).and_call_original
+
+      service.open(key, checksum: checksum) { |_f| nil }
+    end
+  end
+
   describe '#download_chunk' do
     let(:key) { 'uploads/test/file.jpg' }
     let(:url) { 'https://ik.imagekit.io/test_account/uploads/test/file.jpg' }
