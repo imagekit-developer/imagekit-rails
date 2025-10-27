@@ -291,7 +291,11 @@ module Imagekit
 
       # Check if the object is an Active Storage attachment
       def active_storage_attachment?(obj)
-        defined?(ActiveStorage) && obj.is_a?(ActiveStorage::Attached::One)
+        return false unless defined?(::ActiveStorage)
+        return false unless defined?(::ActiveStorage::Attached)
+        return false unless defined?(::ActiveStorage::Attached::One)
+
+        obj.is_a?(::ActiveStorage::Attached::One)
       end
     end
   end
