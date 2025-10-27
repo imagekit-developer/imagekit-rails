@@ -13,23 +13,27 @@ module Imagekit
       #
       #   imagekit:
       #     service: ImageKit
-      #     url_endpoint: <%= ENV['IMAGEKIT_URL_ENDPOINT'] %>
-      #     public_key: <%= ENV['IMAGEKIT_PUBLIC_KEY'] %>
-      #     private_key: <%= ENV['IMAGEKIT_PRIVATE_KEY'] %>
       #     folder: "uploads" # optional, default folder for uploads
+      #
+      # Note: url_endpoint, public_key, and private_key are read from
+      # the global Imagekit::Rails.configuration (config/initializers/imagekit.rb)
       class Service < ::ActiveStorage::Service
         attr_reader :client, :url_endpoint, :public_key, :private_key, :folder
 
-        def initialize(url_endpoint:, public_key:, private_key:, folder: nil, **)
+        def initialize(url_endpoint: nil, public_key: nil, private_key: nil, folder: nil, **)
           super()
-          @url_endpoint = url_endpoint
-          @public_key = public_key
-          @private_key = private_key
+
+          # Use provided values or fall back to global configuration
+          config = Imagekit::Rails.configuration
+          @url_endpoint = url_endpoint || config.url_endpoint
+          @public_key = public_key || config.public_key
+          @private_key = private_key || config.private_key
           @folder = folder
+
           @client = Imagekit::Client.new(
-            private_key: private_key,
-            public_key: public_key,
-            base_url: url_endpoint
+            private_key: @private_key,
+            public_key: @public_key,
+            base_url: @url_endpoint
           )
         end
 

@@ -75,10 +75,10 @@ For file uploads, choose one:
 # config/storage.yml
 imagekit:
   service: ImageKit
-  url_endpoint: <%= ENV['IMAGEKIT_URL_ENDPOINT'] %>
-  public_key: <%= ENV['IMAGEKIT_PUBLIC_KEY'] %>
-  private_key: <%= ENV['IMAGEKIT_PRIVATE_KEY'] %>
+  folder: "uploads"  # optional
 ```
+
+> **Note:** Active Storage will automatically use the credentials from your initializer (`config/initializers/imagekit.rb`). You only need to specify Active Storage-specific options like `folder` in `storage.yml`.
 
 📖 [Full Active Storage Guide →](ACTIVE_STORAGE.md)
 

@@ -4,20 +4,31 @@ The `imagekit-rails` gem provides seamless integration with Active Storage, allo
 
 ## Configuration
 
-### 1. Configure storage.yml
+### 1. Configure ImageKit credentials
 
-Add ImageKit as a storage service in `config/storage.yml`:
+First, configure your ImageKit credentials in `config/initializers/imagekit.rb`:
+
+```ruby
+Imagekit::Rails.configure do |config|
+  config.public_key = ENV['IMAGEKIT_PUBLIC_KEY']
+  config.private_key = ENV['IMAGEKIT_PRIVATE_KEY']
+  config.url_endpoint = ENV['IMAGEKIT_URL_ENDPOINT']
+end
+```
+
+### 2. Configure storage.yml
+
+Add ImageKit as a storage service in `config/storage.yml`. Note that you only need to specify Active Storage-specific options here:
 
 ```yaml
 imagekit:
   service: ImageKit
-  url_endpoint: <%= ENV['IMAGEKIT_URL_ENDPOINT'] %>
-  public_key: <%= ENV['IMAGEKIT_PUBLIC_KEY'] %>
-  private_key: <%= ENV['IMAGEKIT_PRIVATE_KEY'] %>
   folder: "uploads" # optional, default folder for all uploads
 ```
 
-### 2. Set Active Storage service
+The service will automatically use the credentials from your initializer configuration.
+
+### 3. Set Active Storage service
 
 In your environment files (`config/environments/production.rb`, etc.):
 
@@ -179,15 +190,12 @@ Standard file upload (recommended):
 
 ### Folder Structure
 
-Active Storage automatically generates unique keys for uploaded files. With the ImageKit service, you can control the base folder using the `folder` configuration:
+Active Storage automatically generates unique keys for uploaded files. With the ImageKit service, you can control the base folder using the `folder` configuration in `config/storage.yml`:
 
 ```yaml
 # config/storage.yml
 imagekit:
   service: ImageKit
-  url_endpoint: <%= ENV['IMAGEKIT_URL_ENDPOINT'] %>
-  public_key: <%= ENV['IMAGEKIT_PUBLIC_KEY'] %>
-  private_key: <%= ENV['IMAGEKIT_PRIVATE_KEY'] %>
   folder: "production/uploads"  # All files go under this folder
 ```
 
@@ -242,9 +250,6 @@ Or use ImageKit with test folder:
 # config/storage.yml
 imagekit_test:
   service: ImageKit
-  url_endpoint: <%= ENV['IMAGEKIT_URL_ENDPOINT'] %>
-  public_key: <%= ENV['IMAGEKIT_PUBLIC_KEY'] %>
-  private_key: <%= ENV['IMAGEKIT_PRIVATE_KEY'] %>
   folder: "test_uploads"
 ```
 
@@ -252,14 +257,14 @@ imagekit_test:
 
 ### Files Not Uploading
 
-1. Verify your ImageKit credentials are correct
-2. Check that `public_key` and `private_key` are set
+1. Verify your ImageKit credentials are correct in `config/initializers/imagekit.rb`
+2. Check that `public_key`, `private_key`, and `url_endpoint` are set in the initializer
 3. Ensure your ImageKit account has upload permissions
 4. Check Rails logs for specific error messages
 
 ### URLs Not Generating
 
-1. Verify `url_endpoint` is configured
+1. Verify `url_endpoint` is configured in `config/initializers/imagekit.rb`
 2. Check that the attachment is actually attached: `@user.avatar.attached?`
 3. Ensure the ImageKit service is properly configured in `storage.yml`
 4. Verify the imagekit gem is properly loaded
