@@ -5,7 +5,7 @@ module Imagekit
     module Helper
       # Generates an image tag with ImageKit URL transformations and responsive image support
       #
-      # @param src [String] Required. The image path (relative or absolute)
+      # @param src [String, ActiveStorage::Attached::One] Required. The image path or Active Storage attachment
       # @param options [Hash] Optional parameters for the image tag
       # @option options [String] :url_endpoint The ImageKit URL endpoint (overrides config)
       # @option options [Array<Hash>] :transformation Array of transformation objects
@@ -28,6 +28,9 @@ module Imagekit
       #
       # @example Basic usage
       #   ik_image_tag("/path/to/image.jpg", alt: "My Image")
+      #
+      # @example With Active Storage
+      #   ik_image_tag(user.avatar, alt: "User Avatar")
       #
       # @example With transformations
       #   ik_image_tag(
@@ -57,6 +60,13 @@ module Imagekit
       #     alt: "Image with text overlay"
       #   )
       def ik_image_tag(src, options = {})
+        # Handle Active Storage attachments
+        if active_storage_attachment?(src)
+          return nil unless src.attached?
+
+          src = src.blob.key
+        end
+
         raise ArgumentError, 'src is required' if src.nil? || src.empty?
 
         config = Imagekit::Rails.configuration
@@ -146,7 +156,7 @@ module Imagekit
 
       # Generates a video tag with ImageKit URL transformations
       #
-      # @param src [String] Required. The video path (relative or absolute)
+      # @param src [String, ActiveStorage::Attached::One] Required. The video path or Active Storage attachment
       # @param options [Hash] Optional parameters for the video tag
       # @option options [String] :url_endpoint The ImageKit URL endpoint (overrides config)
       # @option options [Array<Hash>] :transformation Array of transformation objects
@@ -170,6 +180,9 @@ module Imagekit
       # @example Basic usage
       #   ik_video_tag("/path/to/video.mp4", controls: true)
       #
+      # @example With Active Storage
+      #   ik_video_tag(post.video, controls: true)
+      #
       # @example With transformations
       #   ik_video_tag(
       #     "/video.mp4",
@@ -184,6 +197,15 @@ module Imagekit
       #     poster: ik_url("/video.mp4/ik-thumbnail.jpg")
       #   )
       def ik_video_tag(src, options = {})
+        # Handle Active Storage attachments
+        original_src = src
+        if active_storage_attachment?(src)
+          return nil unless src.attached?
+
+          original_src = src.blob.filename.to_s
+          src = src.blob.key
+        end
+
         raise ArgumentError, 'src is required' if src.nil? || src.empty?
 
         config = Imagekit::Rails.configuration
@@ -252,10 +274,24 @@ module Imagekit
 
         video_url = helper.build_url(src_options)
 
+        # Determine file extension for video type
+        extension = if original_src == src
+                      ::File.extname(src).delete('.')
+                    else
+                      ::File.extname(original_src).delete('.')
+                    end
+
         # Generate the video tag with source
         content_tag(:video, video_attributes) do
-          tag(:source, src: video_url, type: "video/#{::File.extname(src).delete('.')}")
+          tag(:source, src: video_url, type: "video/#{extension}")
         end
+      end
+
+      private
+
+      # Check if the object is an Active Storage attachment
+      def active_storage_attachment?(obj)
+        defined?(ActiveStorage) && obj.is_a?(ActiveStorage::Attached::One)
       end
     end
   end

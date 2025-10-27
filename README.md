@@ -17,40 +17,99 @@ Rails view helpers for [ImageKit.io](https://imagekit.io) - simple `ik_image_tag
 
 ## Installation
 
-Add these lines to your application's Gemfile:
+### 1. Add Gems
+
+Add **both** gems to your `Gemfile`:
 
 ```ruby
-# ImageKit core gem (currently on GitHub, not yet published to RubyGems)
+# ImageKit core SDK (currently on GitHub)
 gem 'imagekit', git: 'https://github.com/stainless-sdks/imagekit-ruby.git'
 
-# ImageKit Rails helpers
+# ImageKit Rails integration
 gem 'imagekit-rails'
 ```
-
-And then execute:
 
 ```bash
 bundle install
 ```
 
-**Note:** The `imagekit` gem is currently hosted on GitHub. Once it's published to RubyGems, you can remove the git reference.
+> ⚠️ **Important:** You must add **both** gems. The `imagekit` gem is not yet on RubyGems.
 
-## Configuration
+### 2. Get ImageKit Credentials
 
-Create an initializer at `config/initializers/imagekit.rb`:
+1. Sign up at [imagekit.io](https://imagekit.io/registration) (free tier available)
+2. Go to [Developer → API Keys](https://imagekit.io/dashboard/developer/api-keys)
+3. Copy your:
+   - **URL Endpoint** (e.g., `https://ik.imagekit.io/your_imagekit_id`)
+   - **Public Key** (needed for uploads)
+   - **Private Key** (needed for signed URLs)
+
+### 3. Configure
+
+Create `config/initializers/imagekit.rb`:
 
 ```ruby
 # config/initializers/imagekit.rb
 Imagekit::Rails.configure do |config|
   config.url_endpoint = ENV['IMAGEKIT_URL_ENDPOINT']
-  config.private_key = ENV['IMAGEKIT_PRIVATE_KEY']
+  config.public_key = ENV['IMAGEKIT_PUBLIC_KEY']      # Required for uploads
+  config.private_key = ENV['IMAGEKIT_PRIVATE_KEY']    # Required for signed URLs
 end
 ```
+
+Set environment variables (`.env` file or Rails credentials):
+
+```bash
+# .env
+IMAGEKIT_URL_ENDPOINT=https://ik.imagekit.io/your_imagekit_id
+IMAGEKIT_PUBLIC_KEY=public_your_key_here
+IMAGEKIT_PRIVATE_KEY=private_your_key_here
 ```
 
-You can also set these values via environment variables:
-- `IMAGEKIT_URL_ENDPOINT`
-- `IMAGEKIT_PRIVATE_KEY` (only required if using signed URLs)
+### 4. Optional: Active Storage or CarrierWave
+
+For file uploads, choose one:
+
+**Active Storage** (Rails 6+):
+```yaml
+# config/storage.yml
+imagekit:
+  service: ImageKit
+  url_endpoint: <%= ENV['IMAGEKIT_URL_ENDPOINT'] %>
+  public_key: <%= ENV['IMAGEKIT_PUBLIC_KEY'] %>
+  private_key: <%= ENV['IMAGEKIT_PRIVATE_KEY'] %>
+```
+
+📖 [Full Active Storage Guide →](ACTIVE_STORAGE.md)
+
+**CarrierWave**:
+```ruby
+# app/uploaders/avatar_uploader.rb
+class AvatarUploader < CarrierWave::Uploader::Base
+  storage :imagekit
+end
+```
+
+📖 [Full CarrierWave Guide →](CARRIERWAVE.md)
+
+## Configuration
+
+**Configuration Options:**
+
+```ruby
+# config/initializers/imagekit.rb
+Imagekit::Rails.configure do |config|
+  config.url_endpoint = ENV['IMAGEKIT_URL_ENDPOINT']  # Required
+  config.public_key = ENV['IMAGEKIT_PUBLIC_KEY']      # Required for uploads
+  config.private_key = ENV['IMAGEKIT_PRIVATE_KEY']    # Required for signed URLs
+  
+  # Optional: Configure defaults
+  config.transformation_position = :query              # or :path
+  config.responsive = true                             # Enable responsive images by default
+  config.device_breakpoints = [640, 750, 828, 1080, 1200, 1920, 2048, 3840]
+  config.image_breakpoints = [16, 32, 48, 64, 96, 128, 256, 384]
+end
+```
 
 ## Usage
 

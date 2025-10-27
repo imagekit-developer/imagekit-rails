@@ -3,11 +3,12 @@
 module Imagekit
   module Rails
     class Configuration
-      attr_accessor :private_key, :url_endpoint, :transformation_position,
+      attr_accessor :private_key, :public_key, :url_endpoint, :transformation_position,
                     :responsive, :device_breakpoints, :image_breakpoints
 
       def initialize
         @private_key = ENV['IMAGEKIT_PRIVATE_KEY']
+        @public_key = ENV['IMAGEKIT_PUBLIC_KEY']
         @url_endpoint = ENV['IMAGEKIT_URL_ENDPOINT']
         @transformation_position = :query
         @responsive = true
