@@ -2,42 +2,40 @@
 
 require_relative 'lib/imagekit/rails/version'
 
-Gem::Specification.new do |spec|
-  spec.name = 'imagekit-rails'
-  spec.version = Imagekit::Rails::VERSION
-  spec.authors = ['ImageKit']
-  spec.email = ['support@imagekit.io']
+Gem::Specification.new do |s|
+  s.name = 'imagekit-rails'
+  s.version = Imagekit::Rails::VERSION
+  s.summary = 'ImageKit Rails integration with view helpers and Active Storage support'
+  s.description = 'Comprehensive Rails integration for ImageKit.io with view helpers (ik_image_tag, ik_video_tag) and Active Storage service adapter. Provides easy image optimization, transformation, and responsive image support.'
+  s.authors = ['ImageKit']
+  s.email = 'support@imagekit.io'
+  s.homepage = 'https://github.com/imagekit-developer/imagekit-rails'
+  s.license = 'MIT'
+  s.metadata['homepage_uri'] = s.homepage
+  s.metadata['source_code_uri'] = 'https://github.com/imagekit-developer/imagekit-rails'
+  s.metadata['changelog_uri'] = 'https://github.com/imagekit-developer/imagekit-rails/blob/main/CHANGELOG.md'
+  s.metadata['rubygems_mfa_required'] = 'false'
+  s.required_ruby_version = '>= 3.0.0'
 
-  spec.summary = 'ImageKit Rails integration with view helpers and Active Storage support'
-  spec.description = 'Comprehensive Rails integration for ImageKit.io with view helpers (ik_image_tag, ik_video_tag) and Active Storage service adapter. Provides easy image optimization, transformation, and responsive image support.'
-  spec.homepage = 'https://github.com/imagekit-developer/imagekit-rails'
-  spec.license = 'MIT'
-  spec.required_ruby_version = '>= 3.0.0'
+  s.files = Dir[
+    'lib/**/*.rb',
+    'LICENSE',
+    'README.md',
+    'CHANGELOG.md',
+    'SUMMARY.md',
+    'QUICKSTART.md',
+    'API.md',
+    'ACTIVE_STORAGE.md',
+    'CONTRIBUTING.md'
+  ]
+  s.extra_rdoc_files = ['README.md']
 
-  spec.metadata['homepage_uri'] = spec.homepage
-  spec.metadata['source_code_uri'] = 'https://github.com/imagekit-developer/imagekit-rails'
-  spec.metadata['changelog_uri'] = 'https://github.com/imagekit-developer/imagekit-rails/blob/main/CHANGELOG.md'
-  spec.metadata['rubygems_mfa_required'] = 'true'
+  s.add_dependency 'rails', '>= 6.0'
 
-  # Specify which files should be added to the gem when it is released.
-  spec.files = Dir.chdir(__dir__) do
-    `git ls-files -z`.split("\x0").reject do |f|
-      (File.expand_path(f) == __FILE__) ||
-        f.start_with?(*%w[bin/ test/ spec/ features/ .git .github appveyor Gemfile])
-    end
-  end
-  spec.bindir = 'exe'
-  spec.executables = spec.files.grep(%r{\Aexe/}) { |f| File.basename(f) }
-  spec.require_paths = ['lib']
-
-  # Dependencies
-  spec.add_dependency 'rails', '>= 6.0'
-  
-  # Note: imagekit gem must be added to the user's Gemfile from GitHub
+  # NOTE: imagekit gem must be added to the user's Gemfile from GitHub
   # until it's published to RubyGems:
   #   gem 'imagekit', git: 'https://github.com/stainless-sdks/imagekit-ruby.git'
 
-  # Development dependencies
-  spec.add_development_dependency 'rspec', '~> 3.0'
-  spec.add_development_dependency 'rubocop', '~> 1.21'
+  s.add_development_dependency 'rspec', '~> 3.0'
+  s.add_development_dependency 'rubocop', '~> 1.21'
 end

@@ -57,3 +57,6 @@ Style/FetchEnvVar:
 
 Gemspec/DevelopmentDependencies:
   Enabled: false
+
+Gemspec/RequireMFA:
+  Enabled: false
