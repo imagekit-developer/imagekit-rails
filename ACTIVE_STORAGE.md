@@ -1,6 +1,58 @@
 # Active Storage Integration
 
-The `imagekit-rails` gem provides seamless integration with Active Storage, allowing you to store uploaded files directly in ImageKit and use them with all ImageKit features.
+The `imagekit-rails` gem provides integration with Active Storage, allowing you to store uploaded files directly in ImageKit and use them with ImageKit's transformation features.
+
+## Important Limitations
+
+Before using Active Storage with ImageKit, please be aware of these limitations:
+
+### 1. **No Direct Browser Uploads**
+Active Storage's built-in "Direct Upload" feature (browser-to-storage uploads) is **not supported** with ImageKit. 
+
+- **Why**: Active Storage's JavaScript uses HTTP PUT requests with raw binary data, but ImageKit's API requires HTTP POST with multipart/form-data.
+- **Impact**: All file uploads must go through your Rails server (standard Active Storage workflow).
+- **Workaround**: Use standard file uploads as shown in this guide. For advanced use cases, you can implement custom JavaScript using ImageKit's Upload API directly.
+
+### 2. **Variants Are Not Supported**
+Active Storage's built-in variant processing (e.g., `variant(resize_to_limit: [100, 100])`) should **not be used** with ImageKit.
+
+- **Why**: Active Storage variants trigger server-side image processing and generate URLs like `/rails/active_storage/representations/...`, which results in errors when using ImageKit as storage.
+- **Solution**: Use ImageKit's on-the-fly transformations via `ik_image_tag` instead (see examples below).
+
+```erb
+<%# ❌ DON'T: Use Active Storage variants %>
+<%= image_tag @user.avatar.variant(resize_to_limit: [200, 200]) %>
+
+<%# ✅ DO: Use ImageKit transformations via ik_image_tag %>
+<%= ik_image_tag(@user.avatar, transformation: [{ width: 200, height: 200 }]) %>
+```
+
+### 3. **File Deletion Not Implemented**
+Files are **not automatically deleted** from ImageKit when you call `purge` or `purge_later`.
+
+- **Why**: ImageKit's deletion API requires a `file_id`, which Active Storage doesn't track.
+- **Impact**: Calling `@user.avatar.purge` will remove the database record but leave the file in ImageKit.
+- **Solution**: Manually delete files from the [ImageKit Media Library](https://imagekit.io/dashboard/media-library) or use the ImageKit API directly.
+
+### 4. **File Existence Checking Limited**
+The `exist?` method always returns `true` after upload.
+
+- **Why**: ImageKit requires listing or searching by file_id to check existence.
+- **Impact**: Active Storage won't detect if a file was manually deleted from ImageKit.
+- **Solution**: Files are validated during download; missing files will raise errors at that point.
+
+## When to Use Active Storage with ImageKit
+
+✅ **Good use cases:**
+- Standard file uploads through Rails forms
+- Leveraging Active Storage's model associations (`has_one_attached`, `has_many_attached`)
+- Using ImageKit's on-the-fly transformations via `ik_image_tag`
+- Migrating from local/S3 storage to ImageKit
+
+❌ **Not recommended for:**
+- Applications requiring browser-to-storage direct uploads
+- Heavy use of Active Storage variants
+- Applications requiring automatic file deletion
 
 ## Configuration
 
@@ -49,6 +101,8 @@ config.active_storage.service = :imagekit # Use ImageKit in production
 
 ### Basic File Uploads
 
+All uploads go through your Rails server (standard Active Storage workflow):
+
 ```ruby
 # In your model
 class User < ApplicationRecord
@@ -70,34 +124,69 @@ def user_params
 end
 ```
 
-### Displaying Images
+### Displaying Images with Transformations
 
-The `ik_image_tag` helper automatically works with Active Storage attachments:
+**Important**: Always use `ik_image_tag` instead of Rails' `image_tag` to leverage ImageKit's transformations:
 
 ```erb
-<%# Basic usage %>
+<%# Basic usage - serves original image %>
 <%= ik_image_tag(@user.avatar, alt: "User Avatar") %>
 
-<%# With transformations %>
+<%# With transformations (recommended) %>
 <%= ik_image_tag(
   @user.avatar,
   transformation: [{ width: 200, height: 200, crop: :thumb }],
   alt: "User Avatar"
 ) %>
 
-<%# With responsive images %>
+<%# Responsive images with transformations %>
 <%= ik_image_tag(
   @user.avatar,
-  width: 800,
+  transformation: [{ width: 800 }],
   sizes: "(max-width: 600px) 100vw, 800px",
   alt: "User Avatar"
 ) %>
 
-<%# For has_many_attached %>
+<%# Multiple photos %>
 <% @user.photos.each do |photo| %>
-  <%= ik_image_tag(photo, transformation: [{ width: 300 }], alt: "Photo") %>
+  <%= ik_image_tag(photo, transformation: [{ width: 300, height: 300, crop: :fill }]) %>
 <% end %>
 ```
+
+**Why `ik_image_tag`?**
+- Generates ImageKit URLs with transformations
+- Supports all ImageKit transformation parameters
+- No server-side image processing needed
+- Transformations happen on-the-fly via ImageKit's CDN
+
+### Common Transformation Examples
+
+```erb
+<%# Resize to fit within dimensions %>
+<%= ik_image_tag(@photo, transformation: [{ width: 400, height: 300 }]) %>
+
+<%# Crop to exact dimensions %>
+<%= ik_image_tag(@photo, transformation: [{ width: 400, height: 300, crop: :fill }]) %>
+
+<%# Thumbnail with face detection %>
+<%= ik_image_tag(@photo, transformation: [{ width: 200, height: 200, crop: :thumb }]) %>
+
+<%# Apply effects %>
+<%= ik_image_tag(@photo, transformation: [{ 
+  width: 400, 
+  effect_gray: true, 
+  quality: 80 
+}]) %>
+
+<%# Chain multiple transformations %>
+<%= ik_image_tag(@photo, transformation: [
+  { width: 400, height: 400, crop: :fill },
+  { effect_sharpen: 100 },
+  { quality: 90 }
+]) %>
+```
+
+See the [ImageKit Transformation Documentation](https://docs.imagekit.io/features/image-transformations) for all available options.
 
 ### Displaying Videos
 
@@ -138,7 +227,9 @@ attrs = @user.avatar.imagekit_responsive_attributes(width: 800)
 
 ## Form Uploads
 
-### Simple File Upload
+### Standard File Upload (Recommended)
+
+All file uploads go through your Rails server:
 
 ```erb
 <%= form_with model: @user do |f| %>
@@ -148,19 +239,17 @@ attrs = @user.avatar.imagekit_responsive_attributes(width: 800)
 <% end %>
 ```
 
-### Direct Upload (Browser to ImageKit)
-
-**Note:** Direct uploads from browser to ImageKit require additional setup and are currently under development. For now, uploads go through your Rails server.
-
-Standard file upload (recommended):
+### Multiple File Upload
 
 ```erb
-<%= form_with model: @user do |f| %>
-  <%= f.label :avatar %>
-  <%= f.file_field :avatar %>
+<%= form_with model: @post do |f| %>
+  <%= f.label :images, "Upload Images" %>
+  <%= f.file_field :images, multiple: true %>
   <%= f.submit %>
 <% end %>
 ```
+
+**Note**: Direct browser-to-ImageKit uploads are not supported due to API incompatibility with Active Storage's DirectUpload JavaScript (which uses PUT requests, while ImageKit requires POST multipart/form-data).
 
 ## File Management
 
@@ -180,39 +269,88 @@ Standard file upload (recommended):
 
 ### Delete Files
 
-**Important Note:** File deletion is currently not implemented in the ImageKit Active Storage service. When you call `purge` or `purge_later`, Active Storage will remove the database record, but the file will remain in ImageKit.
+**⚠️ Important Limitation**: File deletion is **not implemented** in the ImageKit Active Storage service.
 
 ```ruby
-# Removes the attachment record, but file stays in ImageKit
+# ❌ This only removes the Active Storage database record
+# The file remains in ImageKit
 @user.avatar.purge        # Delete attachment immediately
 @user.avatar.purge_later  # Delete attachment in background job
 ```
 
-**To fully delete files:**
-- Manually delete files from your [ImageKit Media Library](https://imagekit.io/dashboard/media-library)
-- Or use the ImageKit API directly to delete files by their file_id
+**To fully delete files from ImageKit:**
 
-This limitation exists because ImageKit's deletion API requires a `file_id`, which Active Storage doesn't track. A future version may implement file deletion by searching for files first.
+1. **Manual deletion**: Use the [ImageKit Media Library](https://imagekit.io/dashboard/media-library) dashboard
+2. **API deletion**: Use ImageKit's API directly with the file_id
+
+```ruby
+# Example: Delete via ImageKit API (you'll need the file_id)
+# Note: Active Storage doesn't track file_id, so you'll need to search for it first
+
+# This is a workaround - not built into the gem
+imagekit_client = Imagekit::Client.new(private_key: ENV['IMAGEKIT_PRIVATE_KEY'])
+
+# Search for the file by path to get its file_id
+file_path = @user.avatar.key  # e.g., "uploads/abc123xyz/avatar.jpg"
+# Then use ImageKit's search/list API to find the file_id
+# Finally delete: imagekit_client.files.delete(file_id: file_id)
+```
+
+**Why this limitation exists**: ImageKit requires a `file_id` for deletion, but Active Storage only tracks a `key` (file path). Future versions may implement automatic file_id tracking.
 
 ## Advanced Usage
 
-### File Organization
+### Understanding Active Storage Variants vs ImageKit Transformations
 
-Active Storage automatically generates unique keys for uploaded files. These keys determine the file path in ImageKit. For example, Active Storage might generate a key like `variants/abc123xyz456/thumbnail.jpg`, which will be stored in ImageKit at that exact path.
-
-If you want to organize files in specific folders, you can customize Active Storage's key generation. See [Active Storage documentation](https://edgeguides.rubyonrails.org/active_storage_overview.html) for details on customizing storage paths.
-
-### Variants (Active Storage Processing)
-
-While Active Storage supports variants, with ImageKit you can apply transformations on-the-fly:
-
+**Active Storage Variants** (❌ Don't use with ImageKit):
 ```erb
-<%# Instead of Active Storage variants %>
+<%# This creates a server-side processed variant %>
+<%# URLs like /rails/active_storage/representations/... %>
+<%# Results in 500 errors with ImageKit storage %>
 <%= image_tag @user.avatar.variant(resize_to_limit: [200, 200]) %>
+```
 
-<%# Use ImageKit transformations (no processing needed) %>
+**ImageKit Transformations** (✅ Use this instead):
+```erb
+<%# This applies transformations on-the-fly via ImageKit's CDN %>
+<%# URLs like https://ik.imagekit.io/your_id/path?tr=w-200,h-200 %>
+<%# No server processing, instant transformations %>
 <%= ik_image_tag(@user.avatar, transformation: [{ width: 200, height: 200 }]) %>
 ```
+
+**Why ImageKit transformations are better:**
+- ✅ No server-side processing required
+- ✅ Transformations applied on-the-fly by ImageKit's CDN
+- ✅ Cached globally for fast delivery
+- ✅ Support for advanced features (smart crop, quality optimization, format conversion)
+- ✅ Original file is never modified
+
+### Common Migration Pattern from Variants
+
+If you're migrating from local/S3 storage with variants, here's how to convert:
+
+```erb
+<%# Before (with local/S3 storage) %>
+<%= image_tag @photo.variant(resize_to_fill: [400, 300]) %>
+<%= image_tag @photo.variant(resize_to_limit: [800, 600]) %>
+<%= image_tag @avatar.variant(resize_and_pad: [200, 200, background: [255, 255, 255]]) %>
+
+<%# After (with ImageKit) %>
+<%= ik_image_tag(@photo, transformation: [{ width: 400, height: 300, crop: :fill }]) %>
+<%= ik_image_tag(@photo, transformation: [{ width: 800, height: 600 }]) %>
+<%= ik_image_tag(@avatar, transformation: [{ 
+  width: 200, 
+  height: 200, 
+  crop: :pad_resize,
+  background: 'FFFFFF'
+}]) %>
+```
+
+### File Organization
+
+Active Storage automatically generates unique keys for uploaded files. These keys determine the file path in ImageKit. For example, Active Storage might generate a key like `abc123xyz456`, which will be stored in ImageKit at that path.
+
+To organize files in specific folders, you can customize Active Storage's key generation. See [Active Storage documentation](https://edgeguides.rubyonrails.org/active_storage_overview.html) for details.
 
 ### Multiple Attachments
 
@@ -224,9 +362,9 @@ end
 # Upload multiple files
 @post.images.attach(params[:images])
 
-# Display all images
+# Display all images with transformations
 <% @post.images.each do |image| %>
-  <%= ik_image_tag(image, transformation: [{ width: 400 }]) %>
+  <%= ik_image_tag(image, transformation: [{ width: 400, crop: :fill }]) %>
 <% end %>
 ```
 
@@ -256,30 +394,98 @@ imagekit_test:
 ### Files Not Uploading
 
 1. Verify your ImageKit credentials are correct in `config/initializers/imagekit.rb`
-2. Check that `public_key`, `private_key`, and `url_endpoint` are set in the initializer
+2. Check that `public_key`, `private_key`, and `url_endpoint` are set
 3. Ensure your ImageKit account has upload permissions
 4. Check Rails logs for specific error messages
 
-### URLs Not Generating
+### URLs Not Generating or Showing Errors
 
-1. Verify `url_endpoint` is configured in `config/initializers/imagekit.rb`
-2. Check that the attachment is actually attached: `@user.avatar.attached?`
-3. Ensure the ImageKit service is properly configured in `storage.yml`
-4. Verify the imagekit gem is properly loaded
+1. **Issue**: Seeing 500 errors or `/rails/active_storage/representations/...` URLs
+   - **Cause**: Using `image_tag` with `.variant()` instead of `ik_image_tag`
+   - **Solution**: Replace all `image_tag @attachment.variant(...)` with `ik_image_tag(@attachment, transformation: [...])`
 
-### Performance
+2. **Issue**: `url_endpoint` not configured
+   - **Cause**: Missing configuration in `config/initializers/imagekit.rb`
+   - **Solution**: Verify all three credentials are set (public_key, private_key, url_endpoint)
 
-- Use standard uploads (files go through your Rails server)
+3. **Issue**: Image not attached
+   - **Cause**: Calling `ik_image_tag` on unattached file
+   - **Solution**: Check `@user.avatar.attached?` before displaying
+
+### Performance Optimization
+
+- Use `ik_image_tag` with transformations instead of serving original files
 - Enable CDN caching in your ImageKit dashboard
-- Use responsive images with `srcset` for optimal performance
-- Consider background jobs for large file uploads
+- Use responsive images with `srcset` for optimal performance:
+  ```erb
+  <%= ik_image_tag(@photo, 
+    transformation: [{ width: 800 }],
+    sizes: "(max-width: 600px) 100vw, 800px"
+  ) %>
+  ```
+- Use background jobs for large file uploads (standard Rails practice)
+- Apply format optimization:
+  ```erb
+  <%= ik_image_tag(@photo, transformation: [{ 
+    width: 800, 
+    format: :auto,  # Automatically serve WebP where supported
+    quality: 80 
+  }]) %>
+  ```
 
-### Known Limitations
+## Known Limitations Summary
 
-- **File Deletion**: Files are not automatically deleted from ImageKit when calling `purge` or `purge_later`. Files must be manually deleted from ImageKit dashboard or via the ImageKit API.
-- **Direct uploads**: Browser-to-ImageKit direct uploads are not yet fully implemented
-- **Streaming**: Large file streaming uses full download (not chunked streaming)
-- **Public URLs**: All URLs go through ImageKit's CDN (use transformations for optimization)
+### Critical Limitations
+
+1. **❌ No Direct Browser Uploads**
+   - Active Storage's DirectUpload JavaScript is not compatible with ImageKit's API
+   - Reason: DirectUpload uses PUT with raw binary; ImageKit requires POST with multipart/form-data
+   - Workaround: Use standard file uploads through Rails server (shown in this guide)
+
+2. **❌ No Variant Support**
+   - Do not use `.variant()` methods with ImageKit storage
+   - Reason: Variants create Rails-processed representations that fail with ImageKit URLs
+   - Solution: Use `ik_image_tag` with `transformation:` parameter instead
+   - Example: Replace `image_tag @photo.variant(resize: "100x100")` with `ik_image_tag(@photo, transformation: [{ width: 100, height: 100 }])`
+
+3. **❌ File Deletion Not Implemented**
+   - `purge` and `purge_later` only remove database records
+   - Reason: ImageKit requires file_id for deletion, Active Storage only tracks keys
+   - Solution: Manually delete from ImageKit dashboard or use ImageKit API
+
+4. **⚠️ File Existence Check Limited**
+   - `exist?` always returns true after upload
+   - Reason: ImageKit requires listing/searching to verify existence
+   - Impact: Missing files detected only during download
+
+### Recommended Workflow
+
+✅ **What works great:**
+- Standard file uploads through Rails forms
+- Active Storage model associations (`has_one_attached`, `has_many_attached`)
+- Displaying images with `ik_image_tag` and transformations
+- All ImageKit transformation features (resize, crop, effects, quality, format)
+- Responsive images with srcset
+- File downloads and streaming
+
+❌ **What doesn't work:**
+- Direct browser-to-ImageKit uploads
+- Active Storage variants (`.variant()`, `resize_to_limit`, etc.)
+- Automatic file deletion from ImageKit
+- Real-time file existence verification
+
+### Comparison with Other Storage Services
+
+| Feature | Local/S3 Storage | ImageKit Storage |
+|---------|-----------------|------------------|
+| File Upload | ✅ Through server | ✅ Through server |
+| Direct Upload | ✅ Supported | ❌ Not supported |
+| Variants | ✅ Server processing | ❌ Use transformations |
+| Image Transformations | ❌ Requires processing | ✅ On-the-fly CDN |
+| File Deletion | ✅ Automatic | ❌ Manual |
+| File Existence | ✅ Real-time | ⚠️ Limited |
+| CDN Delivery | ⚠️ Requires setup | ✅ Built-in |
+| Format Optimization | ❌ Manual | ✅ Automatic |
 
 ## Migration from Other Storage
 
