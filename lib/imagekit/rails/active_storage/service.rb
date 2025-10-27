@@ -164,15 +164,31 @@ module Imagekit
               expire: Time.now.to_i + expires_in
             )
 
-            payload[:url] = "#{@url_endpoint}/api/v1/files/upload"
+            # Extract folder and filename from the key
+            folder_path = ::File.dirname(key)
+            file_name = ::File.basename(key)
 
-            {
-              url: "#{@url_endpoint}/api/v1/files/upload",
-              headers: {
-                'Content-Type' => content_type,
-                'Content-Length' => content_length.to_s
-              }.merge(authenticated_params.transform_keys(&:to_s))
+            # Build upload parameters
+            upload_params = {
+              token: authenticated_params[:token],
+              expire: authenticated_params[:expire],
+              signature: authenticated_params[:signature],
+              fileName: file_name,
+              publicKey: @public_key,
+              useUniqueFileName: false
             }
+
+            # Only include folder if there is one (don't pass nil or '.')
+            upload_params[:folder] = folder_path unless folder_path == '.'
+
+            # Build query string
+            query_string = upload_params.map { |k, v| "#{k}=#{CGI.escape(v.to_s)}" }.join('&')
+
+            # Return URL string with authentication parameters as query string
+            # Active Storage's DirectUpload expects a string URL, not a hash
+            url = "#{@url_endpoint}/api/v1/files/upload?#{query_string}"
+            payload[:url] = url
+            url
           end
         end
 
