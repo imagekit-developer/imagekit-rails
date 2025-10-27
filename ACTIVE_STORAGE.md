@@ -18,12 +18,11 @@ end
 
 ### 2. Configure storage.yml
 
-Add ImageKit as a storage service in `config/storage.yml`. Note that you only need to specify Active Storage-specific options here:
+Add ImageKit as a storage service in `config/storage.yml`:
 
 ```yaml
 imagekit:
   service: ImageKit
-  folder: "uploads" # optional, default folder for all uploads
 ```
 
 The service will automatically use the credentials from your initializer configuration.
@@ -181,29 +180,27 @@ Standard file upload (recommended):
 
 ### Delete Files
 
+**Important Note:** File deletion is currently not implemented in the ImageKit Active Storage service. When you call `purge` or `purge_later`, Active Storage will remove the database record, but the file will remain in ImageKit.
+
 ```ruby
-@user.avatar.purge        # Delete file immediately
-@user.avatar.purge_later  # Delete file in background job
+# Removes the attachment record, but file stays in ImageKit
+@user.avatar.purge        # Delete attachment immediately
+@user.avatar.purge_later  # Delete attachment in background job
 ```
+
+**To fully delete files:**
+- Manually delete files from your [ImageKit Media Library](https://imagekit.io/dashboard/media-library)
+- Or use the ImageKit API directly to delete files by their file_id
+
+This limitation exists because ImageKit's deletion API requires a `file_id`, which Active Storage doesn't track. A future version may implement file deletion by searching for files first.
 
 ## Advanced Usage
 
-### Folder Structure
+### File Organization
 
-Active Storage automatically generates unique keys for uploaded files. With the ImageKit service, you can control the base folder using the `folder` configuration in `config/storage.yml`:
+Active Storage automatically generates unique keys for uploaded files. These keys determine the file path in ImageKit. For example, Active Storage might generate a key like `variants/abc123xyz456/thumbnail.jpg`, which will be stored in ImageKit at that exact path.
 
-```yaml
-# config/storage.yml
-imagekit:
-  service: ImageKit
-  folder: "production/uploads"  # All files go under this folder
-```
-
-Files will be stored with Active Storage's automatic keys:
-- `production/uploads/abc123xyz456/avatar.jpg`
-- `production/uploads/def789uvw012/photo.png`
-
-**Note:** ImageKit service stores files with their blob key. You can customize the folder structure by configuring the `folder` option in your storage.yml.
+If you want to organize files in specific folders, you can customize Active Storage's key generation. See [Active Storage documentation](https://edgeguides.rubyonrails.org/active_storage_overview.html) for details on customizing storage paths.
 
 ### Variants (Active Storage Processing)
 
@@ -244,14 +241,15 @@ Use local storage in test environment:
 config.active_storage.service = :local
 ```
 
-Or use ImageKit with test folder:
+Or use ImageKit for testing (files will be uploaded to ImageKit):
 
 ```yaml
 # config/storage.yml
 imagekit_test:
   service: ImageKit
-  folder: "test_uploads"
 ```
+
+**Note:** Consider using local storage for tests to avoid unnecessary API calls and costs.
 
 ## Troubleshooting
 
@@ -278,6 +276,7 @@ imagekit_test:
 
 ### Known Limitations
 
+- **File Deletion**: Files are not automatically deleted from ImageKit when calling `purge` or `purge_later`. Files must be manually deleted from ImageKit dashboard or via the ImageKit API.
 - **Direct uploads**: Browser-to-ImageKit direct uploads are not yet fully implemented
 - **Streaming**: Large file streaming uses full download (not chunked streaming)
 - **Public URLs**: All URLs go through ImageKit's CDN (use transformations for optimization)
@@ -339,5 +338,6 @@ end
 - Test thoroughly on staging first
 - Consider keeping old storage as backup initially
 - Update `config/storage.yml` to use `:imagekit` after migration
+- Note that files deleted from Active Storage will remain in ImageKit
 
 Run with: `rails storage:migrate_to_imagekit`

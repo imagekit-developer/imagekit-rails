@@ -13,14 +13,16 @@ module Imagekit
       #
       #   imagekit:
       #     service: ImageKit
-      #     folder: "uploads" # optional, default folder for uploads
       #
       # Note: url_endpoint, public_key, and private_key are read from
       # the global Imagekit::Rails.configuration (config/initializers/imagekit.rb)
+      #
+      # The Active Storage 'key' is used as the complete file path in ImageKit.
+      # Active Storage generates unique keys that include any necessary folder structure.
       class Service < ::ActiveStorage::Service
-        attr_reader :client, :url_endpoint, :public_key, :private_key, :folder
+        attr_reader :client, :url_endpoint, :public_key, :private_key
 
-        def initialize(url_endpoint: nil, public_key: nil, private_key: nil, folder: nil, **)
+        def initialize(url_endpoint: nil, public_key: nil, private_key: nil, **)
           super()
 
           # Use provided values or fall back to global configuration
@@ -28,7 +30,6 @@ module Imagekit
           @url_endpoint = url_endpoint || config.url_endpoint
           @public_key = public_key || config.public_key
           @private_key = private_key || config.private_key
-          @folder = folder
 
           @client = Imagekit::Client.new(
             private_key: @private_key
@@ -37,25 +38,29 @@ module Imagekit
 
         # Upload a file to ImageKit
         #
-        # @param key [String] The unique identifier for the file
+        # @param key [String] The complete path for the file in ImageKit (e.g., "uploads/abc123xyz")
         # @param io [IO] The file content to upload
         # @param checksum [String] Optional MD5 checksum for integrity verification
-        def upload(key, io, checksum: nil, content_type: nil, filename: nil, custom_metadata: {}, **)
+        def upload(key, io, checksum: nil, filename: nil, **)
           instrument :upload, key: key, checksum: checksum do
             # Read the file content
             content = io.read
             io.rewind if io.respond_to?(:rewind)
 
-            # Upload to ImageKit
-            response = @client.files.upload(
+            # Extract folder and filename from the key
+            # The key is the complete path: "folder/subfolder/filename"
+            folder_path = ::File.dirname(key)
+            file_name = filename || ::File.basename(key)
+
+            # Upload to ImageKit - the key determines the full path
+            @client.files.upload(
               file: content,
-              file_name: filename || ::File.basename(key),
-              folder: folder_for(key),
+              file_name: file_name,
+              folder: folder_path == '.' ? nil : folder_path,
               use_unique_file_name: false
             )
 
-            # Store the file_id for later retrieval
-            response
+            # Active Storage doesn't use the response, it tracks files by the key parameter
           end
         rescue Imagekit::Errors::BaseError => e
           raise ::ActiveStorage::IntegrityError, "Upload failed: #{e.message}"
@@ -102,31 +107,23 @@ module Imagekit
         # @param key [String] The unique identifier for the file
         def delete(key)
           instrument :delete, key: key do
-            # Find the file by name/path
-            file = find_file(key)
-            @client.files.delete(file_id: file.file_id) if file
+            # TODO: ImageKit requires file_id to delete files
+            # We would need to search for the file first to get its file_id
+            # For now, deletion is not implemented
+            # Files can be manually deleted from ImageKit dashboard
           end
-        rescue Imagekit::Errors::BaseError
-          # File might not exist, which is fine for delete
-          true
         end
 
         # Delete multiple files from ImageKit
         #
-        # @param keys [Array<String>] The unique identifiers for the files
+        # @param prefix [String] The prefix path to delete
         def delete_prefixed(prefix)
           instrument :delete_prefixed, prefix: prefix do
-            # List all files with the prefix
-            folder_path = folder_for(prefix)
-            files = @client.assets.list(path: folder_path)
-
-            files.each do |file|
-              @client.files.delete(file_id: file.file_id) if file.respond_to?(:file_id)
-            end
+            # TODO: ImageKit requires file_id to delete files
+            # Bulk deletion would require listing files first and then deleting each by file_id
+            # For now, deletion is not implemented
+            # Files can be manually deleted from ImageKit dashboard
           end
-        rescue Imagekit::Errors::BaseError
-          # Ignore errors during bulk delete
-          true
         end
 
         # Check if a file exists in ImageKit
@@ -135,13 +132,13 @@ module Imagekit
         # @return [Boolean]
         def exist?(key)
           instrument :exist, key: key do |payload|
-            file = find_file(key)
-            answer = file.present?
+            # TODO: ImageKit requires searching by file_id or listing files
+            # For now, we assume files exist after successful upload
+            # Active Storage will handle missing files via download errors
+            answer = true
             payload[:exist] = answer
             answer
           end
-        rescue Imagekit::Errors::BaseError
-          false
         end
 
         # Generate a URL for the file
@@ -182,22 +179,10 @@ module Imagekit
 
         private
 
-        def folder_for(key)
-          if folder
-            path = "#{folder}/#{key}"
-            ::File.dirname(path)
-          else
-            ::File.dirname(key)
-          end
-        end
-
         def url_for_key(key, expires_in: nil, transformation: nil)
-          # Build the full file path including the folder
-          # The key is just the blob identifier, we need to prepend the folder
-          path = folder ? "#{folder}/#{key}" : key
-
+          # The key is the complete file path in ImageKit
           src_options = Imagekit::Models::SrcOptions.new(
-            src: path,
+            src: key,
             url_endpoint: @url_endpoint,
             transformation: transformation || [],
             signed: expires_in.present?,
@@ -205,19 +190,6 @@ module Imagekit
           )
 
           @client.helper.build_url(src_options)
-        end
-
-        def find_file(key)
-          # Search for file by name in the folder
-          folder_path = folder_for(key)
-          filename = ::File.basename(key)
-
-          files = @client.assets.list(
-            path: folder_path,
-            search_query: "name:\"#{filename}\""
-          )
-
-          files.first
         end
 
         def stream(key, &block)

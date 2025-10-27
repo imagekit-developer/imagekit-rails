@@ -75,10 +75,9 @@ For file uploads, choose one:
 # config/storage.yml
 imagekit:
   service: ImageKit
-  folder: "uploads"  # optional
 ```
 
-> **Note:** Active Storage will automatically use the credentials from your initializer (`config/initializers/imagekit.rb`). You only need to specify Active Storage-specific options like `folder` in `storage.yml`.
+> **Note:** Active Storage will automatically use the credentials from your initializer (`config/initializers/imagekit.rb`). The configuration is minimal - just specify the service name.
 
 📖 [Full Active Storage Guide →](ACTIVE_STORAGE.md)
 
