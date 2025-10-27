@@ -31,9 +31,7 @@ module Imagekit
           @folder = folder
 
           @client = Imagekit::Client.new(
-            private_key: @private_key,
-            public_key: @public_key,
-            base_url: @url_endpoint
+            private_key: @private_key
           )
         end
 
