@@ -77,7 +77,7 @@ imagekit:
   service: ImageKit
 ```
 
-> **Note:** Active Storage will automatically use the credentials from your initializer (`config/initializers/imagekit.rb`). The configuration is minimal - just specify the service name.
+> **Note:** Active Storage will automatically use the credentials from your initializer (`config/initializers/imagekit.rb`). The service reads `url_endpoint`, `public_key`, and `private_key` from the global configuration. No additional parameters are needed in `storage.yml`.
 
 📖 [Full Active Storage Guide →](ACTIVE_STORAGE.md)
 

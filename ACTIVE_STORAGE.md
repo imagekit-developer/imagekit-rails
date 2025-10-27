@@ -16,14 +16,16 @@ Active Storage's built-in "Direct Upload" feature (browser-to-storage uploads) i
 ### 2. **Variants Are Not Supported**
 Active Storage's built-in variant processing (e.g., `variant(resize_to_limit: [100, 100])`) should **not be used** with ImageKit.
 
-- **Why**: Active Storage variants trigger server-side image processing and generate URLs like `/rails/active_storage/representations/...`, which results in errors when using ImageKit as storage.
-- **Solution**: Use ImageKit's on-the-fly transformations via `ik_image_tag` instead (see examples below).
+- **Why**: Active Storage variants trigger server-side image processing and generate URLs like `/rails/active_storage/representations/...`. When you call `.variant()`, Active Storage attempts to download the file from ImageKit, process it locally, and upload the variant back to ImageKit - this is inefficient and unnecessary.
+- **Solution**: Use ImageKit's on-the-fly transformations via `ik_image_tag` instead. ImageKit applies transformations in real-time via CDN without any server processing or additional uploads.
 
 ```erb
 <%# ❌ DON'T: Use Active Storage variants %>
+<%# This will download from ImageKit, process on your server, and upload back %>
 <%= image_tag @user.avatar.variant(resize_to_limit: [200, 200]) %>
 
 <%# ✅ DO: Use ImageKit transformations via ik_image_tag %>
+<%# This applies transformations on-the-fly via ImageKit's CDN - no processing needed %>
 <%= ik_image_tag(@user.avatar, transformation: [{ width: 200, height: 200 }]) %>
 ```
 
@@ -62,9 +64,9 @@ First, configure your ImageKit credentials in `config/initializers/imagekit.rb`:
 
 ```ruby
 Imagekit::Rails.configure do |config|
-  config.public_key = ENV['IMAGEKIT_PUBLIC_KEY']
-  config.private_key = ENV['IMAGEKIT_PRIVATE_KEY']
-  config.url_endpoint = ENV['IMAGEKIT_URL_ENDPOINT']
+  config.public_key = ENV['IMAGEKIT_PUBLIC_KEY']      # Required for file uploads
+  config.private_key = ENV['IMAGEKIT_PRIVATE_KEY']    # Required for signed URLs and client operations
+  config.url_endpoint = ENV['IMAGEKIT_URL_ENDPOINT']  # Required for URL generation
 end
 ```
 
@@ -77,7 +79,7 @@ imagekit:
   service: ImageKit
 ```
 
-The service will automatically use the credentials from your initializer configuration.
+**Important:** The service automatically reads all credentials (`url_endpoint`, `public_key`, `private_key`) from your initializer configuration (`config/initializers/imagekit.rb`). Do not add these credentials to `storage.yml` - they will be ignored. The service only needs the `service: ImageKit` declaration.
 
 ### 3. Set Active Storage service
 
@@ -204,25 +206,32 @@ The `ik_video_tag` helper works with video attachments:
 ) %>
 ```
 
-### Using Attachment Methods
+### Checking Attachment Information
 
-Active Storage attachments gain additional ImageKit methods:
+You can access attachment metadata using standard Active Storage methods:
 
 ```ruby
 # In your views or controllers
-@user.avatar.imagekit_url
-# => "https://ik.imagekit.io/your_id/xyz123abc456/avatar.jpg"
+@user.avatar.attached?          # => true/false
+@user.avatar.blob.key          # => "abc123xyz456" (unique identifier)
+@user.avatar.blob.filename     # => "avatar.jpg"
+@user.avatar.blob.content_type # => "image/jpeg"
+@user.avatar.blob.byte_size    # => 52341
 
-# With transformations
-@user.avatar.imagekit_url(transformation: [{ width: 200, height: 200 }])
-# => "https://ik.imagekit.io/your_id/xyz123abc456/avatar.jpg?tr=w-200,h-200"
+# To get the ImageKit URL, use the ik_image_tag helper:
+# In views:
+<%= ik_image_tag(@user.avatar, alt: "Avatar") %>
 
-# Signed URLs
-@user.avatar.imagekit_url(signed: true, expires_in: 3600)
+# Or access the service URL directly:
+url = @user.avatar.service.url(@user.avatar.blob.key)
+# => "https://ik.imagekit.io/your_id/abc123xyz456"
 
-# Responsive attributes
-attrs = @user.avatar.imagekit_responsive_attributes(width: 800)
-# => { src: "...", srcset: "... 640w, ... 750w, ...", sizes: "100vw" }
+# With transformations:
+url = @user.avatar.service.url(
+  @user.avatar.blob.key,
+  transformation: [{ width: 200, height: 200 }]
+)
+# => "https://ik.imagekit.io/your_id/abc123xyz456?tr=w-200,h-200"
 ```
 
 ## Form Uploads
@@ -304,22 +313,27 @@ file_path = @user.avatar.key  # e.g., "uploads/abc123xyz/avatar.jpg"
 
 **Active Storage Variants** (❌ Don't use with ImageKit):
 ```erb
-<%# This creates a server-side processed variant %>
-<%# URLs like /rails/active_storage/representations/... %>
-<%# Results in 500 errors with ImageKit storage %>
+<%# When you use .variant(), Active Storage will: %>
+<%# 1. Download the original file from ImageKit to your server %>
+<%# 2. Process it using MiniMagick/libvips on your server %>
+<%# 3. Upload the processed variant BACK to ImageKit %>
+<%# 4. Serve via URLs like /rails/active_storage/representations/... %>
+<%# This is wasteful - it re-uploads transformed files to ImageKit! %>
 <%= image_tag @user.avatar.variant(resize_to_limit: [200, 200]) %>
 ```
 
 **ImageKit Transformations** (✅ Use this instead):
 ```erb
-<%# This applies transformations on-the-fly via ImageKit's CDN %>
+<%# ImageKit applies transformations on-the-fly via CDN %>
+<%# No downloads, no server processing, no re-uploads %>
 <%# URLs like https://ik.imagekit.io/your_id/path?tr=w-200,h-200 %>
-<%# No server processing, instant transformations %>
+<%# Original file stays untouched, transformations cached globally %>
 <%= ik_image_tag(@user.avatar, transformation: [{ width: 200, height: 200 }]) %>
 ```
 
 **Why ImageKit transformations are better:**
 - ✅ No server-side processing required
+- ✅ No redundant file uploads to ImageKit
 - ✅ Transformations applied on-the-fly by ImageKit's CDN
 - ✅ Cached globally for fast delivery
 - ✅ Support for advanced features (smart crop, quality optimization, format conversion)
@@ -348,9 +362,42 @@ If you're migrating from local/S3 storage with variants, here's how to convert:
 
 ### File Organization
 
-Active Storage automatically generates unique keys for uploaded files. These keys determine the file path in ImageKit. For example, Active Storage might generate a key like `abc123xyz456`, which will be stored in ImageKit at that path.
+Active Storage automatically generates unique keys for uploaded files. The service uses these keys as the complete file path in ImageKit:
 
-To organize files in specific folders, you can customize Active Storage's key generation. See [Active Storage documentation](https://edgeguides.rubyonrails.org/active_storage_overview.html) for details.
+**How it works:**
+1. Active Storage generates a key (e.g., `abc123xyz456`)
+2. The service extracts the folder path using `File.dirname(key)` (e.g., `.` for root or `folder/subfolder`)
+3. The service extracts the filename using `File.basename(key)` (e.g., `abc123xyz456` or `image.jpg`)
+4. The file is uploaded to ImageKit at that path
+
+**Customizing folder structure:**
+You can set a custom key when attaching files to organize them in specific folders:
+
+```ruby
+# In your controller
+def create
+  @post = Post.new(post_params.except(:image))
+  
+  # Attach with custom key for folder organization
+  if params[:post][:image].present?
+    image_file = params[:post][:image]
+    custom_key = "uploads/posts/#{image_file.original_filename}"
+    
+    @post.image.attach(
+      io: image_file,
+      filename: image_file.original_filename,
+      content_type: image_file.content_type,
+      key: custom_key
+    )
+  end
+  
+  @post.save
+end
+```
+
+This will upload the file to ImageKit at `/uploads/posts/filename.jpg`.
+
+For more information about Active Storage, see the [Active Storage documentation](https://edgeguides.rubyonrails.org/active_storage_overview.html).
 
 ### Multiple Attachments
 
@@ -444,8 +491,8 @@ imagekit_test:
 
 2. **❌ No Variant Support**
    - Do not use `.variant()` methods with ImageKit storage
-   - Reason: Variants create Rails-processed representations that fail with ImageKit URLs
-   - Solution: Use `ik_image_tag` with `transformation:` parameter instead
+   - Reason: Variants download files from ImageKit, process them on your server, then upload the processed variants back to ImageKit - this is wasteful and unnecessary
+   - Solution: Use `ik_image_tag` with `transformation:` parameter for on-the-fly CDN transformations
    - Example: Replace `image_tag @photo.variant(resize: "100x100")` with `ik_image_tag(@photo, transformation: [{ width: 100, height: 100 }])`
 
 3. **❌ File Deletion Not Implemented**
