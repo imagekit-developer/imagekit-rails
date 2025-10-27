@@ -19,6 +19,8 @@ module Imagekit
       #
       # The Active Storage 'key' is used as the complete file path in ImageKit.
       # Active Storage generates unique keys that include any necessary folder structure.
+      #
+      # All files are uploaded as public files in ImageKit.
       class Service < ::ActiveStorage::Service
         attr_reader :client, :url_endpoint, :public_key, :private_key
 
@@ -82,7 +84,7 @@ module Imagekit
             end
           else
             instrument :download, key: key do
-              url = url_for_key(key, expires_in: 300)
+              url = url_for_key(key)
               response = Net::HTTP.get_response(URI(url))
               response.body
             end
@@ -95,7 +97,7 @@ module Imagekit
         # @param range [Range] The byte range to download
         def download_chunk(key, range)
           instrument :download_chunk, key: key, range: range do
-            url = url_for_key(key, expires_in: 300)
+            url = url_for_key(key)
             uri = URI(url)
 
             Net::HTTP.start(uri.host, uri.port, use_ssl: uri.scheme == 'https') do |http|
@@ -182,23 +184,37 @@ module Imagekit
           }
         end
 
+        # Generate a URL for the file
+        #
+        # @param key [String] The unique identifier for the file
+        # @param _expires_in [Integer] Optional expiration time in seconds (not used, ImageKit files are public)
+        # @param _filename [ActiveStorage::Filename] The filename to use (not used)
+        # @param _disposition [Symbol] Content disposition (not used)
+        # @param _content_type [String] The content type (not used)
+        # @param transformation [Array<Hash>] ImageKit transformations
+        def url(key, expires_in: nil, filename: nil, disposition: nil, content_type: nil, transformation: nil, **)
+          instrument :url, key: key do |payload|
+            generated_url = url_for_key(key, transformation: transformation)
+            payload[:url] = generated_url
+            generated_url
+          end
+        end
+
         private
 
-        def url_for_key(key, expires_in: nil, transformation: nil)
+        def url_for_key(key, transformation: nil)
           # The key is the complete file path in ImageKit
           src_options = Imagekit::Models::SrcOptions.new(
             src: key,
             url_endpoint: @url_endpoint,
-            transformation: transformation || [],
-            signed: expires_in.present?,
-            expires_in: expires_in
+            transformation: transformation || []
           )
 
           @client.helper.build_url(src_options)
         end
 
         def stream(key, &block)
-          url = url_for_key(key, expires_in: 300)
+          url = url_for_key(key)
           uri = URI(url)
 
           Net::HTTP.start(uri.host, uri.port, use_ssl: uri.scheme == 'https') do |http|
