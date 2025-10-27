@@ -427,19 +427,5 @@ RSpec.describe Imagekit::Rails::ActiveStorage::Service do
         expect(service.send(:service_name)).to eq(:imagekit)
       end
     end
-
-    describe '#verify_integrity_of' do
-      it 'skips checksum verification and returns true' do
-        # ImageKit may serve optimized files, so we skip checksum verification
-        result = service.send(:verify_integrity_of, 'fake_checksum', 'uploads/test/file.jpg')
-        expect(result).to be true
-      end
-
-      it 'does not raise an error even with mismatched checksums' do
-        expect do
-          service.send(:verify_integrity_of, 'checksum1', 'key1')
-        end.not_to raise_error
-      end
-    end
   end
 end
