@@ -1,31 +1,25 @@
-# ImageKit Rails (WIP - Do not use)
+# ImageKit Rails
 
-Rails view helpers for [ImageKit.io](https://imagekit.io) - simple `ik_image_tag` and `ik_video_tag` helpers similar to the ImageKit React SDK.
+Rails view helpers and Active Storage integration for [ImageKit.io](https://imagekit.io).
 
 [![Gem Version](https://badge.fury.io/rb/imagekit-rails.svg)](https://badge.fury.io/rb/imagekit-rails)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 ## Features
 
-- 🎨 **Easy Transformations** - Resize, crop, rotate, and apply effects with simple parameters
-- 📱 **Responsive Images** - Automatic `srcset` generation for optimal image delivery
-- ⚡ **Lazy Loading** - Built-in lazy loading support
-- 🎭 **Overlays** - Add text, image, video, or solid color overlays
-- 🤖 **AI Transformations** - Background removal, upscaling, and more
-- 🔐 **Signed URLs** - Secure your images with signed URLs
-- � **Video Support** - Full video tag support with transformations
+- View helpers: `ik_image_tag` and `ik_video_tag` with transformation support
+- Active Storage service for storing files in ImageKit
+- Automatic responsive images with `srcset` generation
+- Image transformations (resize, crop, effects, overlays)
+- Video support with transformations
+- Signed URLs for secure delivery
 
 ## Installation
 
-### 1. Add Gems
-
-Add **both** gems to your `Gemfile`:
+Add to your `Gemfile`:
 
 ```ruby
-# ImageKit core SDK (currently on GitHub)
 gem 'imagekit', git: 'https://github.com/stainless-sdks/imagekit-ruby.git'
-
-# ImageKit Rails integration
 gem 'imagekit-rails'
 ```
 
@@ -33,134 +27,81 @@ gem 'imagekit-rails'
 bundle install
 ```
 
-> ⚠️ **Important:** You must add **both** gems. The `imagekit` gem is not yet on RubyGems.
+**Note:** The `imagekit` gem is required but not yet published to RubyGems.
 
-### 2. Get ImageKit Credentials
-
-1. Sign up at [imagekit.io](https://imagekit.io/registration) (free tier available)
-2. Go to [Developer → API Keys](https://imagekit.io/dashboard/developer/api-keys)
-3. Copy your:
-   - **URL Endpoint** (e.g., `https://ik.imagekit.io/your_imagekit_id`)
-   - **Public Key** (needed for uploads)
-   - **Private Key** (needed for signed URLs)
-
-### 3. Configure
+## Configuration
 
 Create `config/initializers/imagekit.rb`:
 
 ```ruby
-# config/initializers/imagekit.rb
 Imagekit::Rails.configure do |config|
   config.url_endpoint = ENV['IMAGEKIT_URL_ENDPOINT']
-  config.public_key = ENV['IMAGEKIT_PUBLIC_KEY']      # Required for uploads
-  config.private_key = ENV['IMAGEKIT_PRIVATE_KEY']    # Required for signed URLs
+  config.public_key = ENV['IMAGEKIT_PUBLIC_KEY']
+  config.private_key = ENV['IMAGEKIT_PRIVATE_KEY']
+  
+  # Optional defaults
+  # config.transformation_position = :query  # or :path
+  # config.responsive = true                 # Enable responsive images
 end
 ```
 
-Set environment variables (`.env` file or Rails credentials):
+Get your credentials from [ImageKit Dashboard → API Keys](https://imagekit.io/dashboard/developer/api-keys).
 
-```bash
-# .env
-IMAGEKIT_URL_ENDPOINT=https://ik.imagekit.io/your_imagekit_id
-IMAGEKIT_PUBLIC_KEY=public_your_key_here
-IMAGEKIT_PRIVATE_KEY=private_your_key_here
+## Quick Start
+
+### View Helpers
+
+Use `ik_image_tag` and `ik_video_tag` in your views:
+
+```erb
+<!-- Basic image -->
+<%= ik_image_tag("/photo.jpg", alt: "My Photo") %>
+
+<!-- With transformations -->
+<%= ik_image_tag("/photo.jpg", transformation: [{ width: 400, height: 300 }], alt: "Resized") %>
+
+<!-- Video -->
+<%= ik_video_tag("/video.mp4", controls: true) %>
 ```
 
-### 4. Optional: Active Storage or CarrierWave
+### Active Storage
 
-For file uploads, choose one:
+Store uploaded files in ImageKit:
 
-**Active Storage** (Rails 6+):
 ```yaml
 # config/storage.yml
 imagekit:
   service: ImageKit
 ```
 
-> **Note:** Active Storage will automatically use the credentials from your initializer (`config/initializers/imagekit.rb`). The service reads `url_endpoint`, `public_key`, and `private_key` from the global configuration. No additional parameters are needed in `storage.yml`.
-
-📖 [Full Active Storage Guide →](ACTIVE_STORAGE.md)
-
-**CarrierWave**:
 ```ruby
-# app/uploaders/avatar_uploader.rb
-class AvatarUploader < CarrierWave::Uploader::Base
-  storage :imagekit
+# config/environments/production.rb
+config.active_storage.service = :imagekit
+```
+
+```ruby
+# app/models/user.rb
+class User < ApplicationRecord
+  has_one_attached :avatar
 end
 ```
 
-📖 [Full CarrierWave Guide →](CARRIERWAVE.md)
-
-## Configuration
-
-**Configuration Options:**
-
-```ruby
-# config/initializers/imagekit.rb
-Imagekit::Rails.configure do |config|
-  config.url_endpoint = ENV['IMAGEKIT_URL_ENDPOINT']  # Required
-  config.public_key = ENV['IMAGEKIT_PUBLIC_KEY']      # Required for uploads
-  config.private_key = ENV['IMAGEKIT_PRIVATE_KEY']    # Required for signed URLs
-  
-  # Optional: Configure defaults
-  config.transformation_position = :query              # or :path
-  config.responsive = true                             # Enable responsive images by default
-  config.device_breakpoints = [640, 750, 828, 1080, 1200, 1920, 2048, 3840]
-  config.image_breakpoints = [16, 32, 48, 64, 96, 128, 256, 384]
-end
+```erb
+<!-- Display with transformations -->
+<%= ik_image_tag(@user.avatar, transformation: [{ width: 200, height: 200 }]) %>
 ```
 
-## Usage
+**[Full Active Storage Documentation →](ACTIVE_STORAGE.md)**
 
-This gem provides two view helpers: `ik_image_tag` and `ik_video_tag`.
+## Transformations
 
-### Image Tag (`ik_image_tag`)
-
-The simplest way to use ImageKit images:
+### Basic Transformations
 
 ```erb
-<%= ik_image_tag("/path/to/image.jpg", alt: "My Image") %>
+<%= ik_image_tag("/photo.jpg", transformation: [{ width: 400, height: 300 }]) %>
 ```
 
-This generates:
-
-```html
-<img src="https://ik.imagekit.io/your_imagekit_id/path/to/image.jpg" alt="My Image" loading="lazy">
-```
-
-### Video Tag (`ik_video_tag`)
-
-For videos, use the `ik_video_tag` helper:
-
-```erb
-<%= ik_video_tag("/path/to/video.mp4", controls: true) %>
-```
-
-This generates:
-
-```html
-<video controls>
-  <source src="https://ik.imagekit.io/your_imagekit_id/path/to/video.mp4" type="video/mp4">
-</video>
-```
-
-### Image Transformations
-
-Apply transformations using the `transformation` option:
-
-```erb
-<%= ik_image_tag(
-  "/photo.jpg",
-  transformation: [
-    { width: 400, height: 300 }
-  ],
-  alt: "Resized Image"
-) %>
-```
-
-### Multiple Transformations (Chained)
-
-You can chain multiple transformations:
+### Chaining Transformations
 
 ```erb
 <%= ik_image_tag(
@@ -169,74 +110,47 @@ You can chain multiple transformations:
     { width: 400, height: 300 },
     { rotation: 90 },
     { blur: 10 }
-  ],
-  alt: "Transformed Image"
+  ]
 ) %>
 ```
 
 ### Responsive Images
 
-Responsive images are enabled by default and automatically generate `srcset` attributes:
+Enabled by default. Automatically generates `srcset`:
 
 ```erb
-<%= ik_image_tag(
-  "/photo.jpg",
-  width: 800,
-  sizes: "(max-width: 600px) 100vw, 800px",
-  alt: "Responsive Image"
-) %>
+<%= ik_image_tag("/photo.jpg", width: 800, sizes: "(max-width: 600px) 100vw, 800px") %>
 ```
 
-This generates:
-
-```html
-<img 
-  src="https://ik.imagekit.io/your_imagekit_id/photo.jpg?tr=w-800,c-at_max" 
-  srcset="https://ik.imagekit.io/your_imagekit_id/photo.jpg?tr=w-640,c-at_max 640w,
-          https://ik.imagekit.io/your_imagekit_id/photo.jpg?tr=w-750,c-at_max 750w,
-          ..."
-  sizes="(max-width: 600px) 100vw, 800px"
-  alt="Responsive Image"
-  loading="lazy"
-  width="800">
-```
-
-To disable responsive images:
+Disable per image:
 
 ```erb
-<%= ik_image_tag("/photo.jpg", responsive: false, alt: "Static Image") %>
+<%= ik_image_tag("/photo.jpg", responsive: false) %>
 ```
 
-### Lazy Loading
-
-Lazy loading is enabled by default. You can control it with the `loading` attribute:
+### Common Parameters
 
 ```erb
-<!-- Lazy load (default) -->
-<%= ik_image_tag("/photo.jpg", alt: "Lazy Loaded", loading: "lazy") %>
+<!-- Resize and crop -->
+<%= ik_image_tag("/photo.jpg", transformation: [{ width: 400, height: 300, crop: "at_max" }]) %>
 
-<!-- Eager load -->
-<%= ik_image_tag("/photo.jpg", alt: "Eager Loaded", loading: "eager") %>
+<!-- Format and quality -->
+<%= ik_image_tag("/photo.jpg", transformation: [{ format: "webp", quality: 80 }]) %>
+
+<!-- Effects -->
+<%= ik_image_tag("/photo.jpg", transformation: [{ grayscale: true, blur: 5 }]) %>
+
+<!-- Border and radius -->
+<%= ik_image_tag("/photo.jpg", transformation: [{ radius: 20, border: "3_FF0000" }]) %>
 ```
 
-### CSS Classes and Data Attributes
-
-Add CSS classes and data attributes like any Rails image tag:
-
-```erb
-<%= ik_image_tag(
-  "/photo.jpg",
-  alt: "Styled Image",
-  class: "img-fluid rounded shadow",
-  data: { action: "click->gallery#open", id: 123 }
-) %>
-```
+See [ImageKit Transformation Documentation](https://docs.imagekit.io/features/image-transformations) for all options.
 
 ## Advanced Features
 
-### Text Overlays
+### Overlays
 
-Add text overlays to your images:
+Text overlay:
 
 ```erb
 <%= ik_image_tag(
@@ -244,19 +158,14 @@ Add text overlays to your images:
   transformation: [{
     overlay: {
       type: "text",
-      text: "Hello World!",
-      transformation: [
-        { fontSize: 50, fontColor: "FFFFFF" }
-      ]
+      text: "Hello World",
+      transformation: [{ fontSize: 50, fontColor: "FFFFFF" }]
     }
-  }],
-  alt: "Image with text overlay"
+  }]
 ) %>
 ```
 
-### Image Overlays
-
-Add image overlays:
+Image overlay:
 
 ```erb
 <%= ik_image_tag(
@@ -265,267 +174,121 @@ Add image overlays:
     overlay: {
       type: "image",
       input: "logo.png",
-      transformation: [
-        { width: 100, height: 100 }
-      ],
+      transformation: [{ width: 100, height: 100 }],
       position: { x: 10, y: 10 }
     }
-  }],
-  alt: "Image with logo overlay"
+  }]
 ) %>
 ```
 
-### Solid Color Overlays
-
-Add solid color overlays:
+### AI Transformations
 
 ```erb
-<%= ik_image_tag(
-  "/background.jpg",
-  transformation: [{
-    overlay: {
-      type: "solidColor",
-      color: "FF0000",
-      transformation: [
-        { width: 200, height: 200 }
-      ]
-    }
-  }],
-  alt: "Image with color overlay"
-) %>
-```
+<!-- Background removal -->
+<%= ik_image_tag("/photo.jpg", transformation: [{ aiRemoveBackground: true }]) %>
 
-### AI-Powered Transformations
+<!-- Upscaling -->
+<%= ik_image_tag("/photo.jpg", transformation: [{ aiUpscale: true }]) %>
 
-#### Background Removal
-
-```erb
-<%= ik_image_tag(
-  "/photo.jpg",
-  transformation: [
-    { aiRemoveBackground: true }
-  ],
-  alt: "Photo with background removed"
-) %>
-```
-
-#### AI Upscaling
-
-```erb
-<%= ik_image_tag(
-  "/photo.jpg",
-  transformation: [
-    { aiUpscale: true }
-  ],
-  alt: "Upscaled photo"
-) %>
-```
-
-#### AI Drop Shadow
-
-```erb
-<%= ik_image_tag(
-  "/photo.jpg",
-  transformation: [
-    { aiDropShadow: true }
-  ],
-  alt: "Photo with AI drop shadow"
-) %>
-```
-
-### Video Transformations
-
-Apply transformations to videos:
-
-```erb
-<%= ik_video_tag(
-  "/video.mp4",
-  transformation: [
-    { width: 640, height: 480 }
-  ],
-  controls: true,
-  preload: "metadata"
-) %>
-```
-
-### Video with Poster Image
-
-Add a poster/thumbnail to your video:
-
-```erb
-<%= ik_video_tag(
-  "/video.mp4",
-  controls: true,
-  poster: "https://ik.imagekit.io/your_imagekit_id/video.mp4/ik-thumbnail.jpg"
-) %>
+<!-- Drop shadow -->
+<%= ik_image_tag("/photo.jpg", transformation: [{ aiDropShadow: true }]) %>
 ```
 
 ### Signed URLs
 
-For secure delivery, use signed URLs:
+For secure delivery:
 
 ```erb
-<%= ik_image_tag(
-  "/private-photo.jpg",
-  signed: true,
-  expires_in: 3600,  # Expires in 1 hour
-  alt: "Secure Image"
-) %>
-
-<%= ik_video_tag(
-  "/private-video.mp4",
-  signed: true,
-  expires_in: 3600,
-  controls: true
-) %>
+<%= ik_image_tag("/private.jpg", signed: true, expires_in: 3600) %>
+<%= ik_video_tag("/private.mp4", signed: true, expires_in: 3600, controls: true) %>
 ```
 
-## Supported Transformations
+### Video Transformations
 
-All ImageKit transformations are supported. Here are some common ones:
+```erb
+<%= ik_video_tag("/video.mp4", transformation: [{ width: 640, height: 480 }], controls: true) %>
+```
 
-| Parameter | Description | Example |
-|-----------|-------------|---------|
-| `width` | Resize width | `{ width: 400 }` |
-| `height` | Resize height | `{ height: 300 }` |
-| `aspectRatio` | Aspect ratio | `{ aspectRatio: "16-9" }` |
-| `quality` | Image quality | `{ quality: 80 }` |
-| `crop` | Crop mode | `{ crop: "at_max" }` |
-| `cropMode` | Advanced crop | `{ cropMode: "extract" }` |
-| `focus` | Focus area | `{ focus: "face" }` |
-| `format` | Output format | `{ format: "webp" }` |
-| `radius` | Border radius | `{ radius: 20 }` |
-| `background` | Background color | `{ background: "FFFFFF" }` |
-| `border` | Border | `{ border: "5_FF0000" }` |
-| `rotation` | Rotate image | `{ rotation: 90 }` |
-| `blur` | Blur effect | `{ blur: 10 }` |
-| `grayscale` | Grayscale | `{ grayscale: true }` |
-| `sharpen` | Sharpen | `{ sharpen: 5 }` |
-| `overlay` | Add overlay | `{ overlay: {...} }` |
+## API Reference
 
-For a complete list of transformations, see the [ImageKit Transformation Documentation](https://imagekit.io/docs/transformations).
+### `ik_image_tag(src, options = {})`
+
+**Parameters:**
+- `src` - Image path or Active Storage attachment
+- `transformation` - Array of transformation hashes
+- `responsive` - Enable/disable responsive images (default: `true`)
+- `loading` - `"lazy"` (default) or `"eager"`
+- `signed` - Generate signed URL (default: `false`)
+- `expires_in` - Expiration time in seconds for signed URLs
+- `width`, `height`, `alt`, `class`, `data` - Standard HTML attributes
+
+### `ik_video_tag(src, options = {})`
+
+**Parameters:**
+- `src` - Video path or Active Storage attachment
+- `transformation` - Array of transformation hashes
+- `controls`, `autoplay`, `loop`, `muted`, `preload`, `poster` - Standard video attributes
+- `signed` - Generate signed URL
+- `expires_in` - Expiration time in seconds
 
 ## Examples
 
-### Product Image with Hover Effect
+### Product Gallery
 
 ```erb
-<div class="product-card">
+<% @products.each do |product| %>
   <%= ik_image_tag(
-    "/products/#{product.id}/main.jpg",
-    transformation: [
-      { width: 400, height: 400, crop: "at_max" },
-      { quality: 80 }
-    ],
+    product.image_path,
+    transformation: [{ width: 400, height: 400, crop: "at_max" }, { quality: 80 }],
     alt: product.name,
-    class: "product-image",
-    data: { product_id: product.id }
+    class: "product-image"
   ) %>
-</div>
+<% end %>
 ```
 
-### Hero Banner with Text Overlay
+### User Avatar
 
 ```erb
 <%= ik_image_tag(
-  "/hero-background.jpg",
+  @user.avatar,
+  transformation: [
+    { width: 200, height: 200, crop: "at_max" },
+    { radius: "max" }
+  ],
+  alt: @user.name
+) %>
+```
+
+### Hero Banner with Text
+
+```erb
+<%= ik_image_tag(
+  "/hero.jpg",
   transformation: [
     { width: 1920, height: 600, crop: "at_max" },
-    { quality: 90 },
     {
       overlay: {
         type: "text",
-        text: "Welcome to Our Site",
-        transformation: [
-          { fontSize: 80, fontColor: "FFFFFF", fontFamily: "Arial" }
-        ],
-        position: { focus: "center" }
+        text: "Welcome",
+        transformation: [{ fontSize: 80, fontColor: "FFFFFF" }]
       }
     }
-  ],
-  alt: "Hero Banner",
-  class: "hero-image"
+  ]
 ) %>
 ```
 
-### Profile Avatar with Border
+## Documentation
 
-```erb
-<%= ik_image_tag(
-  user.avatar_path,
-  transformation: [
-    { width: 200, height: 200, crop: "at_max" },
-    { radius: "max" },
-    { border: "3_0000FF" }
-  ],
-  alt: user.name,
-  class: "avatar"
-) %>
-```
-
-### Gallery with Responsive Images
-
-```erb
-<div class="gallery">
-  <% @photos.each do |photo| %>
-    <%= ik_image_tag(
-      photo.path,
-      width: 800,
-      sizes: "(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw",
-      transformation: [
-        { quality: 85 }
-      ],
-      alt: photo.title,
-      class: "gallery-image",
-      loading: "lazy"
-    ) %>
-  <% end %>
-</div>
-```
-
-## Configuration Options
-
-### Global Configuration
-
-Set default values in your initializer:
-
-```ruby
-Imagekit::Rails.configure do |config|
-  # Required
-  config.url_endpoint = "https://ik.imagekit.io/your_imagekit_id"
-  
-  # Optional for signed URLs
-  config.private_key = ENV['IMAGEKIT_PRIVATE_KEY']
-  
-  # Default transformation position (:query or :path)
-  config.transformation_position = :query
-  
-  # Enable/disable responsive images by default
-  config.responsive = true
-  
-  # Custom breakpoints for responsive images
-  config.device_breakpoints = [640, 750, 828, 1080, 1200, 1920, 2048, 3840]
-  config.image_breakpoints = [16, 32, 48, 64, 96, 128, 256, 384]
-end
-```
-
-### Per-Image Override
-
-Override global settings for individual images:
-
-```erb
-<%= ik_image_tag(
-  "/photo.jpg",
-  url_endpoint: "https://ik.imagekit.io/another_account",
-  transformation_position: :path,
-  responsive: false,
-  alt: "Custom configured image"
-) %>
-```
+- **[Active Storage Integration](ACTIVE_STORAGE.md)** - Complete guide for using ImageKit with Active Storage
+- **[API Reference](API.md)** - Detailed API documentation
+- **[ImageKit Transformations](https://docs.imagekit.io/features/image-transformations)** - All available transformations
 
 ## Development
 
-After checking out the repo, run `bin/setup` to install dependencies. Then, run `rake spec` to run the tests. You can also run `bin/console` for an interactive prompt that will allow you to experiment.
+```bash
+bundle install
+rake spec
+```
 
 ## Contributing
 
@@ -533,16 +296,4 @@ Bug reports and pull requests are welcome on GitHub at https://github.com/imagek
 
 ## License
 
-The gem is available as open source under the terms of the [MIT License](https://opensource.org/licenses/MIT).
-
-## Related Projects
-
-- [ImageKit Ruby SDK](https://github.com/stainless-sdks/imagekit-ruby) - Core Ruby SDK for ImageKit
-- [ImageKit React SDK](https://github.com/imagekit-developer/imagekit-react) - React components for ImageKit
-- [ImageKit Next.js SDK](https://github.com/imagekit-developer/imagekit-nextjs) - Next.js integration for ImageKit
-
-## Support
-
-- [Documentation](https://imagekit.io/docs)
-- [Support](https://imagekit.io/support)
-- [Email](mailto:support@imagekit.io)
+MIT License. See [LICENSE](LICENSE) for details.
