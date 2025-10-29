@@ -3,7 +3,7 @@
 Rails view helpers and Active Storage integration for [ImageKit.io](https://imagekit.io).
 
 [![Gem Version](https://badge.fury.io/rb/imagekit-rails.svg)](https://badge.fury.io/rb/imagekit-rails)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 
 ## Features
 
@@ -296,4 +296,4 @@ Bug reports and pull requests are welcome on GitHub at https://github.com/imagek
 
 ## License
 
-MIT License. See [LICENSE](LICENSE) for details.
+Apache License 2.0. See [LICENSE](LICENSE) for details.

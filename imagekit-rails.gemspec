@@ -10,7 +10,7 @@ Gem::Specification.new do |s|
   s.authors = ['ImageKit']
   s.email = 'support@imagekit.io'
   s.homepage = 'https://github.com/imagekit-developer/imagekit-rails'
-  s.license = 'MIT'
+  s.license = 'Apache-2.0'
   s.metadata['homepage_uri'] = s.homepage
   s.metadata['source_code_uri'] = 'https://github.com/imagekit-developer/imagekit-rails'
   s.metadata['changelog_uri'] = 'https://github.com/imagekit-developer/imagekit-rails/blob/main/CHANGELOG.md'
