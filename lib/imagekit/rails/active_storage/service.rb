@@ -93,7 +93,7 @@ module Imagekit
         end
 
         # Override open to skip checksum verification for ImageKit
-        # 
+        #
         # ImageKit may serve optimized versions of files (format conversion, compression, etc.),
         # which causes the checksum to differ from the originally uploaded file.
         # This is safe because:
@@ -113,7 +113,7 @@ module Imagekit
             # Create a temporary file to download into
             # ActiveStorage may pass name as a string or array [basename, extension]
             tempfile = Tempfile.open(name, tmpdir || Dir.tmpdir, binmode: true)
-            
+
             begin
               # Download the file without checksum verification
               download(key) do |chunk|
