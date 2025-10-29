@@ -79,7 +79,28 @@ imagekit:
   service: ImageKit
 ```
 
-**Important:** The service automatically reads all credentials (`url_endpoint`, `public_key`, `private_key`) from your initializer configuration (`config/initializers/imagekit.rb`). Do not add these credentials to `storage.yml` - they will be ignored. The service only needs the `service: ImageKit` declaration.
+**Note:** By default, the service reads credentials (`url_endpoint`, `public_key`, `private_key`) from your global configuration (`config/initializers/imagekit.rb`). However, you can optionally override these credentials in `storage.yml` to use different ImageKit accounts for different environments or use cases:
+
+```yaml
+# Option 1: Use global configuration (most common)
+imagekit:
+  service: ImageKit
+
+# Option 2: Override with specific credentials
+imagekit_production:
+  service: ImageKit
+  private_key: <%= ENV['IMAGEKIT_PRODUCTION_PRIVATE_KEY'] %>
+  public_key: <%= ENV['IMAGEKIT_PRODUCTION_PUBLIC_KEY'] %>
+  url_endpoint: <%= ENV['IMAGEKIT_PRODUCTION_URL_ENDPOINT'] %>
+
+imagekit_staging:
+  service: ImageKit
+  private_key: <%= ENV['IMAGEKIT_STAGING_PRIVATE_KEY'] %>
+  public_key: <%= ENV['IMAGEKIT_STAGING_PUBLIC_KEY'] %>
+  url_endpoint: <%= ENV['IMAGEKIT_STAGING_URL_ENDPOINT'] %>
+```
+
+If credentials are provided in `storage.yml`, they will take precedence over the global configuration. If not provided, the service falls back to the global configuration.
 
 ### 3. Set Active Storage service
 
@@ -208,30 +229,51 @@ The `ik_video_tag` helper works with video attachments:
 
 ### Checking Attachment Information
 
-You can access attachment metadata using standard Active Storage methods:
+Use standard Active Storage methods to check attachment status:
 
 ```ruby
-# In your views or controllers
-@user.avatar.attached?          # => true/false
-@user.avatar.blob.key          # => "abc123xyz456" (unique identifier)
-@user.avatar.blob.filename     # => "avatar.jpg"
-@user.avatar.blob.content_type # => "image/jpeg"
-@user.avatar.blob.byte_size    # => 52341
+@user.avatar.attached?  # => true/false
+```
 
-# To get the ImageKit URL, use the ik_image_tag helper:
-# In views:
-<%= ik_image_tag(@user.avatar, alt: "Avatar") %>
+### Getting URLs Programmatically
 
-# Or access the service URL directly:
+For views, use `ik_image_tag` (covered above). However, if you need raw URLs for non-view contexts (APIs, background jobs, mailers, or JSON responses), access the service directly:
+
+```ruby
+# Get URL for an attachment
 url = @user.avatar.service.url(@user.avatar.blob.key)
-# => "https://ik.imagekit.io/your_id/abc123xyz456"
+# => "https://ik.imagekit.io/your_id/abc123xyz"
 
-# With transformations:
+# With transformations
 url = @user.avatar.service.url(
   @user.avatar.blob.key,
   transformation: [{ width: 200, height: 200 }]
 )
-# => "https://ik.imagekit.io/your_id/abc123xyz456?tr=w-200,h-200"
+# => "https://ik.imagekit.io/your_id/abc123xyz?tr=w-200,h-200"
+
+# Example: In a JSON API response
+def show
+  render json: {
+    user: {
+      name: @user.name,
+      avatar_url: @user.avatar.service.url(
+        @user.avatar.blob.key,
+        transformation: [{ width: 150, height: 150, crop: :thumb }]
+      )
+    }
+  }
+end
+
+# Example: In a mailer
+class UserMailer < ApplicationMailer
+  def welcome_email(user)
+    @avatar_url = user.avatar.service.url(
+      user.avatar.blob.key,
+      transformation: [{ width: 100, height: 100 }]
+    )
+    mail(to: user.email, subject: "Welcome!")
+  end
+end
 ```
 
 ## Form Uploads
