@@ -459,61 +459,165 @@ end
 
 ## Migration from Other Storage
 
-To migrate existing Active Storage files to ImageKit:
+To migrate existing Active Storage files from local/S3/GCS to ImageKit, use a blob-level migration that preserves file paths and handles errors gracefully.
+
+### Migration Task
+
+Create `lib/tasks/migrate_to_imagekit.rake`:
 
 ```ruby
-# Create a migration task
-# lib/tasks/migrate_to_imagekit.rake
 namespace :storage do
-  desc "Migrate Active Storage files from local/S3 to ImageKit"
+  desc "Migrate Active Storage files from local/S3/GCS to ImageKit"
   task migrate_to_imagekit: :environment do
-    # First, backup your current storage configuration
-    old_service = ActiveStorage::Blob.service
+    require 'tempfile'
     
-    # Temporarily use local/S3 to download
-    # Then switch to ImageKit to upload
+    # Configuration
+    old_service_name = ENV.fetch('OLD_SERVICE', 'local')  # or 's3', 'google', etc.
+    new_service_name = 'imagekit'
     
-    User.find_each do |user|
-      next unless user.avatar.attached?
+    # Get service instances
+    old_service = ActiveStorage::Blob.services.fetch(old_service_name.to_sym)
+    new_service = ActiveStorage::Blob.services.fetch(new_service_name.to_sym)
+    
+    puts "Migrating from #{old_service_name} to #{new_service_name}..."
+    puts "Total blobs to migrate: #{ActiveStorage::Blob.where(service_name: old_service_name).count}"
+    
+    # Migrate all blobs from old service
+    ActiveStorage::Blob.where(service_name: old_service_name).find_each do |blob|
+      print "Migrating blob #{blob.id} (#{blob.filename})... "
       
-      # Download from old storage
-      tempfile = Tempfile.new(['avatar', File.extname(user.avatar.filename.to_s)])
       begin
-        tempfile.binmode
-        user.avatar.download do |chunk|
+        # Create temp file with proper extension
+        tempfile = Tempfile.new(
+          ['migration', File.extname(blob.filename.to_s)],
+          binmode: true
+        )
+        
+        # Download from old service
+        old_service.download(blob.key) do |chunk|
           tempfile.write(chunk)
         end
         tempfile.rewind
         
-        # Store original metadata
-        filename = user.avatar.blob.filename
-        content_type = user.avatar.blob.content_type
-        
-        # Remove old attachment
-        user.avatar.purge
-        
-        # Attach to ImageKit
-        user.avatar.attach(
-          io: tempfile,
-          filename: filename,
-          content_type: content_type
+        # Upload to new service with same key (preserves file paths)
+        new_service.upload(
+          blob.key,
+          tempfile,
+          checksum: blob.checksum,
+          filename: blob.filename.to_s
         )
         
-        puts "Migrated avatar for user #{user.id}"
+        # Update blob record to point to new service
+        blob.update!(service_name: new_service_name)
+        
+        puts "✅ Success"
+        
+      rescue StandardError => e
+        puts "❌ Failed: #{e.message}"
+        # Log error but continue with next blob
+        Rails.logger.error "Migration failed for blob #{blob.id}: #{e.message}\n#{e.backtrace.join("\n")}"
       ensure
-        tempfile.close
-        tempfile.unlink
+        # Always clean up temp file
+        if tempfile
+          tempfile.close
+          tempfile.unlink
+        end
       end
     end
+    
+    puts "\n" + "="*50
+    puts "Migration complete!"
+    puts "Migrated: #{ActiveStorage::Blob.where(service_name: new_service_name).count} blobs"
+    puts "Remaining in #{old_service_name}: #{ActiveStorage::Blob.where(service_name: old_service_name).count} blobs"
+    puts "\nNote: Old files remain in #{old_service_name} storage."
+    puts "Verify all files work correctly before deleting old storage."
+    puts "="*50
   end
 end
 ```
 
-**Important:** 
-- Run this in a background job for production
-- Test thoroughly on staging first
-- Consider keeping old storage as backup initially
-- Update `config/storage.yml` to use `:imagekit` after migration
-- Note that files deleted from Active Storage will remain in ImageKit
+### Usage
 
-Run with: `rails storage:migrate_to_imagekit`
+```bash
+# Set the old service name (default: 'local')
+OLD_SERVICE=local rails storage:migrate_to_imagekit
+
+# Or for S3
+OLD_SERVICE=amazon rails storage:migrate_to_imagekit
+
+# Or for Google Cloud Storage
+OLD_SERVICE=google rails storage:migrate_to_imagekit
+```
+
+### Migration Checklist
+
+**Before Migration:**
+
+1. ✅ **Backup your database** - Keep a copy of the `active_storage_blobs` table
+2. ✅ **Test on staging** - Run migration on a staging environment first
+3. ✅ **Verify credentials** - Ensure ImageKit credentials are correct in `config/initializers/imagekit.rb`
+4. ✅ **Check storage.yml** - Add ImageKit service configuration
+5. ✅ **Monitor space** - Ensure you have enough disk space for temp files during migration
+
+**During Migration:**
+
+1. Run during low-traffic period
+2. Monitor the output for errors
+3. Check Rails logs for detailed error messages
+4. Keep the terminal session active (or use `screen`/`tmux`)
+
+**After Migration:**
+
+1. ✅ **Verify files** - Check that images load correctly in your app
+2. ✅ **Test uploads** - Verify new uploads go to ImageKit
+3. ✅ **Check database** - Confirm blobs have `service_name: 'imagekit'`
+4. ✅ **Keep old storage** - Don't delete old files for at least 1-2 weeks
+5. ✅ **Update config** - Set `config.active_storage.service = :imagekit` if not already
+
+### How It Works
+
+1. **Blob-level migration**: Migrates all attachments across all models automatically
+2. **Preserves file paths**: Uses the same `key` so URLs remain consistent
+3. **Error handling**: One failure doesn't stop the entire migration
+4. **Safe approach**: Old files remain as backup; only the database pointer changes
+5. **Resumable**: If interrupted, re-run to migrate remaining blobs
+
+### Verifying Migration
+
+After migration, verify that files are accessible:
+
+```ruby
+# In Rails console
+blob = ActiveStorage::Blob.first
+blob.service_name  # Should be "imagekit"
+
+# Download test
+blob.download  # Should download from ImageKit
+
+# URL test (if using ik_image_tag)
+# In your app, check that images display correctly
+```
+
+### Rollback (If Needed)
+
+If you need to rollback to the old storage:
+
+```ruby
+# In Rails console - switch back to old service
+ActiveStorage::Blob.where(service_name: 'imagekit').update_all(service_name: 'local')
+
+# Then update config/environments/production.rb
+config.active_storage.service = :local  # or :amazon, :google, etc.
+```
+
+This works because old files are still in the old storage (not deleted).
+
+### Cleaning Up Old Storage
+
+After verifying everything works for 1-2 weeks:
+
+- **Local storage**: Delete the `storage/` directory
+- **S3**: Delete the bucket or folder
+- **GCS**: Delete the bucket
+
+**Important:** Only do this after thoroughly verifying all files are accessible from ImageKit!
