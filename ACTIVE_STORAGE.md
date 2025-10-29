@@ -20,12 +20,10 @@ Active Storage's built-in variant processing (e.g., `variant(resize_to_limit: [1
 - **Solution**: Use ImageKit's on-the-fly transformations via `ik_image_tag` instead. ImageKit applies transformations in real-time via CDN without any server processing or additional uploads.
 
 ```erb
-<%# ❌ DON'T: Use Active Storage variants %>
-<%# This will download from ImageKit, process on your server, and upload back %>
+<!-- Don't do this: -->
 <%= image_tag @user.avatar.variant(resize_to_limit: [200, 200]) %>
 
-<%# ✅ DO: Use ImageKit transformations via ik_image_tag %>
-<%# This applies transformations on-the-fly via ImageKit's CDN - no processing needed %>
+<!-- Do this instead: -->
 <%= ik_image_tag(@user.avatar, transformation: [{ width: 200, height: 200 }]) %>
 ```
 
@@ -45,13 +43,13 @@ The `exist?` method always returns `true` after upload.
 
 ## When to Use Active Storage with ImageKit
 
-✅ **Good use cases:**
+**Good use cases:**
 - Standard file uploads through Rails forms
 - Leveraging Active Storage's model associations (`has_one_attached`, `has_many_attached`)
 - Using ImageKit's on-the-fly transformations via `ik_image_tag`
 - Migrating from local/S3 storage to ImageKit
 
-❌ **Not recommended for:**
+**Not recommended for:**
 - Applications requiring browser-to-storage direct uploads
 - Heavy use of Active Storage variants
 - Applications requiring automatic file deletion
@@ -149,20 +147,20 @@ end
 
 ### Displaying Images with Transformations
 
-**Important**: Always use `ik_image_tag` instead of Rails' `image_tag` to leverage ImageKit's transformations:
+Always use `ik_image_tag` instead of Rails' `image_tag` to leverage ImageKit's transformations:
 
 ```erb
-<%# Basic usage - serves original image %>
+<!-- Basic usage -->
 <%= ik_image_tag(@user.avatar, alt: "User Avatar") %>
 
-<%# With transformations (recommended) %>
+<!-- With transformations -->
 <%= ik_image_tag(
   @user.avatar,
   transformation: [{ width: 200, height: 200, crop: :thumb }],
   alt: "User Avatar"
 ) %>
 
-<%# Responsive images with transformations %>
+<!-- Responsive images -->
 <%= ik_image_tag(
   @user.avatar,
   transformation: [{ width: 800 }],
@@ -170,38 +168,29 @@ end
   alt: "User Avatar"
 ) %>
 
-<%# Multiple photos %>
+<!-- Multiple photos -->
 <% @user.photos.each do |photo| %>
   <%= ik_image_tag(photo, transformation: [{ width: 300, height: 300, crop: :fill }]) %>
 <% end %>
 ```
 
-**Why `ik_image_tag`?**
-- Generates ImageKit URLs with transformations
-- Supports all ImageKit transformation parameters
-- No server-side image processing needed
-- Transformations happen on-the-fly via ImageKit's CDN
-
-### Common Transformation Examples
+Common transformations:
 
 ```erb
-<%# Resize to fit within dimensions %>
+<!-- Resize -->
 <%= ik_image_tag(@photo, transformation: [{ width: 400, height: 300 }]) %>
 
-<%# Crop to exact dimensions %>
+<!-- Crop to exact dimensions -->
 <%= ik_image_tag(@photo, transformation: [{ width: 400, height: 300, crop: :fill }]) %>
 
-<%# Thumbnail with face detection %>
-<%= ik_image_tag(@photo, transformation: [{ width: 200, height: 200, crop: :thumb }]) %>
-
-<%# Apply effects %>
+<!-- Effects -->
 <%= ik_image_tag(@photo, transformation: [{ 
   width: 400, 
   effect_gray: true, 
   quality: 80 
 }]) %>
 
-<%# Chain multiple transformations %>
+<!-- Chain multiple transformations -->
 <%= ik_image_tag(@photo, transformation: [
   { width: 400, height: 400, crop: :fill },
   { effect_sharpen: 100 },
@@ -218,12 +207,11 @@ The `ik_video_tag` helper works with video attachments:
 ```erb
 <%= ik_video_tag(@post.video, controls: true, width: 640) %>
 
-<%# With transformations %>
+<!-- With transformations -->
 <%= ik_video_tag(
   @post.video,
   transformation: [{ width: 640, height: 480 }],
-  controls: true,
-  poster: ik_image_tag(@post.video_thumbnail)
+  controls: true
 ) %>
 ```
 
@@ -320,78 +308,28 @@ All file uploads go through your Rails server:
 
 ### Delete Files
 
-**⚠️ Important Limitation**: File deletion is **not implemented** in the ImageKit Active Storage service.
+File deletion is not implemented. Calling `purge` or `purge_later` will remove the database record but leave the file in ImageKit.
 
 ```ruby
-# ❌ This only removes the Active Storage database record
-# The file remains in ImageKit
-@user.avatar.purge        # Delete attachment immediately
-@user.avatar.purge_later  # Delete attachment in background job
+@user.avatar.purge        # Removes DB record only
+@user.avatar.purge_later  # Removes DB record only (in background)
 ```
 
-**To fully delete files from ImageKit:**
-
-1. **Manual deletion**: Use the [ImageKit Media Library](https://imagekit.io/dashboard/media-library) dashboard
-2. **API deletion**: Use ImageKit's API directly with the file_id
-
-```ruby
-# Example: Delete via ImageKit API (you'll need the file_id)
-# Note: Active Storage doesn't track file_id, so you'll need to search for it first
-
-# This is a workaround - not built into the gem
-imagekit_client = Imagekit::Client.new(private_key: ENV['IMAGEKIT_PRIVATE_KEY'])
-
-# Search for the file by path to get its file_id
-file_path = @user.avatar.key  # e.g., "uploads/abc123xyz/avatar.jpg"
-# Then use ImageKit's search/list API to find the file_id
-# Finally delete: imagekit_client.files.delete(file_id: file_id)
-```
-
-**Why this limitation exists**: ImageKit requires a `file_id` for deletion, but Active Storage only tracks a `key` (file path). Future versions may implement automatic file_id tracking.
+To delete files from ImageKit, use the [ImageKit Media Library](https://imagekit.io/dashboard/media-library) dashboard or the ImageKit API directly (requires `file_id`).
 
 ## Advanced Usage
 
-### Understanding Active Storage Variants vs ImageKit Transformations
+### Migrating from Variants
 
-**Active Storage Variants** (❌ Don't use with ImageKit):
-```erb
-<%# When you use .variant(), Active Storage will: %>
-<%# 1. Download the original file from ImageKit to your server %>
-<%# 2. Process it using MiniMagick/libvips on your server %>
-<%# 3. Upload the processed variant BACK to ImageKit %>
-<%# 4. Serve via URLs like /rails/active_storage/representations/... %>
-<%# This is wasteful - it re-uploads transformed files to ImageKit! %>
-<%= image_tag @user.avatar.variant(resize_to_limit: [200, 200]) %>
-```
-
-**ImageKit Transformations** (✅ Use this instead):
-```erb
-<%# ImageKit applies transformations on-the-fly via CDN %>
-<%# No downloads, no server processing, no re-uploads %>
-<%# URLs like https://ik.imagekit.io/your_id/path?tr=w-200,h-200 %>
-<%# Original file stays untouched, transformations cached globally %>
-<%= ik_image_tag(@user.avatar, transformation: [{ width: 200, height: 200 }]) %>
-```
-
-**Why ImageKit transformations are better:**
-- ✅ No server-side processing required
-- ✅ No redundant file uploads to ImageKit
-- ✅ Transformations applied on-the-fly by ImageKit's CDN
-- ✅ Cached globally for fast delivery
-- ✅ Support for advanced features (smart crop, quality optimization, format conversion)
-- ✅ Original file is never modified
-
-### Common Migration Pattern from Variants
-
-If you're migrating from local/S3 storage with variants, here's how to convert:
+If you're migrating from local/S3 storage and using variants, convert them to ImageKit transformations:
 
 ```erb
-<%# Before (with local/S3 storage) %>
+<!-- Before (local/S3 storage with variants) -->
 <%= image_tag @photo.variant(resize_to_fill: [400, 300]) %>
 <%= image_tag @photo.variant(resize_to_limit: [800, 600]) %>
 <%= image_tag @avatar.variant(resize_and_pad: [200, 200, background: [255, 255, 255]]) %>
 
-<%# After (with ImageKit) %>
+<!-- After (ImageKit transformations) -->
 <%= ik_image_tag(@photo, transformation: [{ width: 400, height: 300, crop: :fill }]) %>
 <%= ik_image_tag(@photo, transformation: [{ width: 800, height: 600 }]) %>
 <%= ik_image_tag(@avatar, transformation: [{ 
@@ -402,25 +340,15 @@ If you're migrating from local/S3 storage with variants, here's how to convert:
 }]) %>
 ```
 
-### File Organization
+### Custom File Organization
 
-Active Storage automatically generates unique keys for uploaded files. The service uses these keys as the complete file path in ImageKit:
-
-**How it works:**
-1. Active Storage generates a key (e.g., `abc123xyz456`)
-2. The service extracts the folder path using `File.dirname(key)` (e.g., `.` for root or `folder/subfolder`)
-3. The service extracts the filename using `File.basename(key)` (e.g., `abc123xyz456` or `image.jpg`)
-4. The file is uploaded to ImageKit at that path
-
-**Customizing folder structure:**
-You can set a custom key when attaching files to organize them in specific folders:
+The service uses the Active Storage `key` as the complete file path in ImageKit, extracting the folder path with `File.dirname(key)` and filename with `File.basename(key)`. To organize files in specific folders, set a custom key when attaching:
 
 ```ruby
 # In your controller
 def create
   @post = Post.new(post_params.except(:image))
   
-  # Attach with custom key for folder organization
   if params[:post][:image].present?
     image_file = params[:post][:image]
     custom_key = "uploads/posts/#{image_file.original_filename}"
@@ -435,26 +363,6 @@ def create
   
   @post.save
 end
-```
-
-This will upload the file to ImageKit at `/uploads/posts/filename.jpg`.
-
-For more information about Active Storage, see the [Active Storage documentation](https://edgeguides.rubyonrails.org/active_storage_overview.html).
-
-### Multiple Attachments
-
-```ruby
-class Post < ApplicationRecord
-  has_many_attached :images
-end
-
-# Upload multiple files
-@post.images.attach(params[:images])
-
-# Display all images with transformations
-<% @post.images.each do |image| %>
-  <%= ik_image_tag(image, transformation: [{ width: 400, crop: :fill }]) %>
-<% end %>
 ```
 
 ## Migration from Other Storage
@@ -553,34 +461,34 @@ OLD_SERVICE=google rails storage:migrate_to_imagekit
 
 **Before Migration:**
 
-1. ✅ **Backup your database** - Keep a copy of the `active_storage_blobs` table
-2. ✅ **Test on staging** - Run migration on a staging environment first
-3. ✅ **Verify credentials** - Ensure ImageKit credentials are correct in `config/initializers/imagekit.rb`
-4. ✅ **Check storage.yml** - Add ImageKit service configuration
-5. ✅ **Monitor space** - Ensure you have enough disk space for temp files during migration
+- Backup your database (especially `active_storage_blobs` table)
+- Test on staging environment first
+- Verify ImageKit credentials in `config/initializers/imagekit.rb`
+- Add ImageKit service to `config/storage.yml`
+- Ensure sufficient disk space for temp files
 
 **During Migration:**
 
-1. Run during low-traffic period
-2. Monitor the output for errors
-3. Check Rails logs for detailed error messages
-4. Keep the terminal session active (or use `screen`/`tmux`)
+- Run during low-traffic period
+- Monitor output for errors
+- Check Rails logs for detailed error messages
+- Use `screen` or `tmux` to keep session active
 
 **After Migration:**
 
-1. ✅ **Verify files** - Check that images load correctly in your app
-2. ✅ **Test uploads** - Verify new uploads go to ImageKit
-3. ✅ **Check database** - Confirm blobs have `service_name: 'imagekit'`
-4. ✅ **Keep old storage** - Don't delete old files for at least 1-2 weeks
-5. ✅ **Update config** - Set `config.active_storage.service = :imagekit` if not already
+- Verify images load correctly in your app
+- Test new uploads go to ImageKit
+- Confirm blobs have `service_name: 'imagekit'` in database
+- Keep old storage for at least 1-2 weeks
+- Update `config.active_storage.service = :imagekit` if not already set
 
 ### How It Works
 
-1. **Blob-level migration**: Migrates all attachments across all models automatically
-2. **Preserves file paths**: Uses the same `key` so URLs remain consistent
-3. **Error handling**: One failure doesn't stop the entire migration
-4. **Safe approach**: Old files remain as backup; only the database pointer changes
-5. **Resumable**: If interrupted, re-run to migrate remaining blobs
+- Migrates all attachments across all models automatically (blob-level)
+- Preserves file paths by using the same `key`
+- Handles errors gracefully - one failure doesn't stop migration
+- Old files remain as backup - only database pointer changes
+- Resumable - re-run to migrate remaining blobs if interrupted
 
 ### Verifying Migration
 
