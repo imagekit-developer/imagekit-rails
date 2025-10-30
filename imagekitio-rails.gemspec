@@ -13,8 +13,7 @@ Gem::Specification.new do |s|
   s.license = 'Apache-2.0'
   s.metadata['homepage_uri'] = s.homepage
   s.metadata['source_code_uri'] = 'https://github.com/imagekit-developer/imagekit-rails'
-  s.metadata['changelog_uri'] = 'https://github.com/imagekit-developer/imagekit-rails/blob/main/CHANGELOG.md'
-  s.metadata['rubygems_mfa_required'] = 'false'
+  s.metadata['rubygems_mfa_required'] = false.to_s
   s.required_ruby_version = '>= 3.2.0'
 
   s.files = Dir[
@@ -26,6 +25,7 @@ Gem::Specification.new do |s|
     'QUICKSTART.md',
     'API.md',
     'ACTIVE_STORAGE.md',
+    'CHANGELOG.md',
     'CONTRIBUTING.md'
   ]
   s.extra_rdoc_files = ['README.md']
