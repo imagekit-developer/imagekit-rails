@@ -165,68 +165,33 @@ module Imagekit
         #
         # @param key [String] The unique identifier for the file
         # @return [void]
-        # @note Requires the imagekit_file_id to be stored in blob metadata during upload.
-        #   If file_id is not available in metadata, deletion will be skipped with a warning.
+        # @note This method is called by Active Storage after the blob record is already deleted
+        #   from the database, making it impossible to retrieve the file_id from metadata.
+        #   Actual deletion is handled automatically by a before_destroy callback on the blob,
+        #   which runs before the blob is destroyed and has access to the file_id in metadata.
+        #   This method is a no-op that exists only to satisfy the Active Storage service interface.
         def delete(key)
-          instrument :delete, key: key do |payload|
-            # Try to get the file_id from blob metadata
-            # This requires that the blob metadata was properly stored during upload
-            blob = find_blob_by_key(key)
-
-            if blob && blob.metadata['imagekit_file_id']
-              file_id = blob.metadata['imagekit_file_id']
-
-              begin
-                @client.files.delete(file_id)
-                payload[:deleted] = true
-              rescue Imagekit::Errors::Error => e
-                # Log the error but don't raise - file might already be deleted
-                ::Rails.logger.warn("ImageKit deletion failed for key #{key}, file_id #{file_id}: #{e.message}") if defined?(::Rails)
-                payload[:deleted] = false
-                payload[:error] = e.message
-              end
-            else
-              # File ID not found in metadata - skip deletion
-              ::Rails.logger.warn("Cannot delete ImageKit file for key #{key}: file_id not found in blob metadata") if defined?(::Rails)
-              payload[:deleted] = false
-              payload[:error] = 'file_id not found in metadata'
-            end
-          end
+          # No-op: Deletion is handled by BlobDeletionCallback before the blob is destroyed
+          # This method is called after blob deletion, so we can't access metadata here
+          ::Rails.logger.debug { "ImageKit delete called for key: #{key} (handled by before_destroy callback)" } if defined?(::Rails)
         end
 
-        # Delete multiple files from ImageKit
+        # Delete multiple files from ImageKit by prefix
         #
-        # @param prefix [String] The prefix path to delete
+        # @param prefix [String] The prefix path to delete (e.g., "uploads/2024/")
         # @return [void]
-        # @note Deletes all blobs whose keys start with the given prefix.
-        #   Requires imagekit_file_id to be stored in each blob's metadata.
+        # @note This method is rarely used by Active Storage. Individual file deletions
+        #   are handled automatically by a before_destroy callback on each blob.
+        #   This method is called after blobs are already deleted from the database,
+        #   so it cannot access blob metadata. This is a no-op that exists only to satisfy
+        #   the Active Storage service interface.
         def delete_prefixed(prefix)
-          instrument :delete_prefixed, prefix: prefix do |payload|
-            deleted_count = 0
-            failed_count = 0
+          # No-op: Deletion is handled by BlobDeletionCallback on individual blobs
+          # This method is called after blobs are deleted, so we can't access metadata
+          return unless defined?(::Rails)
 
-            # Find all blobs with keys starting with the prefix
-            blobs = find_blobs_by_prefix(prefix)
-
-            blobs.each do |blob|
-              if blob.metadata['imagekit_file_id']
-                file_id = blob.metadata['imagekit_file_id']
-
-                begin
-                  @client.files.delete(file_id)
-                  deleted_count += 1
-                rescue Imagekit::Errors::Error => e
-                  ::Rails.logger.warn("ImageKit deletion failed for key #{blob.key}, file_id #{file_id}: #{e.message}") if defined?(::Rails)
-                  failed_count += 1
-                end
-              else
-                ::Rails.logger.warn("Cannot delete ImageKit file for key #{blob.key}: file_id not found in metadata") if defined?(::Rails)
-                failed_count += 1
-              end
-            end
-
-            payload[:deleted_count] = deleted_count
-            payload[:failed_count] = failed_count
+          ::Rails.logger.debug do
+            "ImageKit delete_prefixed called for prefix: #{prefix} (handled by before_destroy callback on individual blobs)"
           end
         end
 
@@ -241,9 +206,10 @@ module Imagekit
             blob = find_blob_by_key(key)
 
             # If blob doesn't exist or has no file_id, file doesn't exist
-            unless blob&.metadata&.key?('imagekit_file_id')
+            if blob.nil? || !blob.metadata.key?('imagekit_file_id')
               payload[:exist] = false
-              return false
+              payload[:reason] = blob.nil? ? 'blob_not_found' : 'file_id_missing'
+              next false
             end
 
             file_id = blob.metadata['imagekit_file_id']

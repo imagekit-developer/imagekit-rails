@@ -9,6 +9,7 @@ require_relative 'imagekit/rails/helper'
 if defined?(ActiveStorage)
   require_relative 'imagekit/rails/active_storage'
   require_relative 'imagekit/rails/active_storage/service'
+  require_relative 'imagekit/rails/active_storage/blob_deletion_callback'
 end
 
 require_relative 'imagekit/rails/railtie' if defined?(Rails::Railtie)
