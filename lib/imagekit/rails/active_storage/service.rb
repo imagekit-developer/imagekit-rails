@@ -181,13 +181,13 @@ module Imagekit
                 payload[:deleted] = true
               rescue Imagekit::Errors::Error => e
                 # Log the error but don't raise - file might already be deleted
-                Rails.logger.warn("ImageKit deletion failed for key #{key}, file_id #{file_id}: #{e.message}") if defined?(Rails)
+                ::Rails.logger.warn("ImageKit deletion failed for key #{key}, file_id #{file_id}: #{e.message}") if defined?(::Rails)
                 payload[:deleted] = false
                 payload[:error] = e.message
               end
             else
               # File ID not found in metadata - skip deletion
-              Rails.logger.warn("Cannot delete ImageKit file for key #{key}: file_id not found in blob metadata") if defined?(Rails)
+              ::Rails.logger.warn("Cannot delete ImageKit file for key #{key}: file_id not found in blob metadata") if defined?(::Rails)
               payload[:deleted] = false
               payload[:error] = 'file_id not found in metadata'
             end
@@ -216,11 +216,11 @@ module Imagekit
                   @client.files.delete(file_id)
                   deleted_count += 1
                 rescue Imagekit::Errors::Error => e
-                  Rails.logger.warn("ImageKit deletion failed for key #{blob.key}, file_id #{file_id}: #{e.message}") if defined?(Rails)
+                  ::Rails.logger.warn("ImageKit deletion failed for key #{blob.key}, file_id #{file_id}: #{e.message}") if defined?(::Rails)
                   failed_count += 1
                 end
               else
-                Rails.logger.warn("Cannot delete ImageKit file for key #{blob.key}: file_id not found in metadata") if defined?(Rails)
+                ::Rails.logger.warn("Cannot delete ImageKit file for key #{blob.key}: file_id not found in metadata") if defined?(::Rails)
                 failed_count += 1
               end
             end
