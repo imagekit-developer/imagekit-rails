@@ -1,6 +1,7 @@
 AllCops:
   NewCops: enable
-  TargetRubyVersion: 3.0
+  TargetRubyVersion: 3.2
+  SuggestExtensions: false
 
 # Disable filename check since imagekit-rails.rb is intentional
 Naming/FileName:
@@ -19,16 +20,20 @@ Metrics/BlockLength:
   Exclude:
     - 'spec/**/*'
     - 'Rakefile'
+    - 'imagekit-rails.gemspec'
 
-# Allow longer methods for the two main helper methods
+# Allow longer methods for the two main helper methods and Active Storage service
 Metrics/MethodLength:
   Exclude:
     - 'lib/imagekit/rails/helper.rb'
+    - 'lib/imagekit/rails/active_storage/service.rb'
+    - 'lib/imagekit/rails/active_storage/blob_deletion_callback.rb'
 
-# Allow higher complexity for the two main helper methods
+# Allow higher complexity for the two main helper methods and Active Storage service
 Metrics/AbcSize:
   Exclude:
     - 'lib/imagekit/rails/helper.rb'
+    - 'lib/imagekit/rails/active_storage/service.rb'
 
 Metrics/CyclomaticComplexity:
   Exclude:
@@ -38,10 +43,14 @@ Metrics/PerceivedComplexity:
   Exclude:
     - 'lib/imagekit/rails/helper.rb'
 
-# Allow longer modules for the main helper module
+# Allow longer modules/classes for the main helper module and Active Storage service
 Metrics/ModuleLength:
   Exclude:
     - 'lib/imagekit/rails/helper.rb'
+
+Metrics/ClassLength:
+  Exclude:
+    - 'lib/imagekit/rails/active_storage/service.rb'
 
 # Documentation is provided in README and inline comments
 Style/Documentation:

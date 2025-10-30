@@ -1,0 +1,25 @@
+#!/usr/bin/env bash
+
+set -Eeuo pipefail
+
+cd -- "$(dirname -- "$0")/.."
+
+# Verify GEM_HOST_API_KEY is set
+if [ -z "${GEM_HOST_API_KEY:-}" ]; then
+  echo "ERROR: GEM_HOST_API_KEY environment variable is not set"
+  exit 1
+fi
+
+echo "==> Installing dependencies"
+bundle install
+
+echo "==> Cleaning old gems"
+find . -maxdepth 1 -type f -name "*.gem" -delete
+
+echo "==> Building gem"
+gem build imagekit-rails.gemspec
+
+echo "==> Publishing to RubyGems"
+gem push imagekit-rails-*.gem
+
+echo "==> Done!"

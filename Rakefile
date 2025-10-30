@@ -11,7 +11,7 @@ task default: %i[spec rubocop]
 
 begin
   require 'yard'
-  
+
   YARD::Rake::YardocTask.new(:doc) do |t|
     t.files = ['lib/**/*.rb']
     t.options = ['--output-dir', 'doc', '--readme', 'README.md']
@@ -23,4 +23,19 @@ begin
   end
 rescue LoadError
   # YARD not available
+end
+
+desc 'Build and release gem to RubyGems'
+task :release do
+  require 'fileutils'
+
+  # Clean old gems
+  FileList['*.gem'].each { |f| FileUtils.rm(f) }
+
+  # Build gem
+  sh 'gem build imagekit-rails.gemspec'
+
+  # Push to RubyGems
+  gem_file = FileList['*.gem'].first
+  sh "gem push #{gem_file}"
 end

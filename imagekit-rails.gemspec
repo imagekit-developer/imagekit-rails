@@ -15,7 +15,7 @@ Gem::Specification.new do |s|
   s.metadata['source_code_uri'] = 'https://github.com/imagekit-developer/imagekit-rails'
   s.metadata['changelog_uri'] = 'https://github.com/imagekit-developer/imagekit-rails/blob/main/CHANGELOG.md'
   s.metadata['rubygems_mfa_required'] = 'false'
-  s.required_ruby_version = '>= 3.0.0'
+  s.required_ruby_version = '>= 3.2.0'
 
   s.files = Dir[
     'lib/**/*.rb',

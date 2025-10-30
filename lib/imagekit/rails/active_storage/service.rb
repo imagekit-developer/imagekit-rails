@@ -287,11 +287,11 @@ module Imagekit
         # @yield Block to execute with instrumentation
         # @return [Object] The result of the yielded block
         # @private
-        def instrument(operation, payload = {}, &block)
+        def instrument(operation, payload = {}, &)
           ActiveSupport::Notifications.instrument(
             "service_#{operation}.active_storage",
             payload.merge(service: service_name),
-            &block
+            &
           )
         end
 
@@ -347,11 +347,9 @@ module Imagekit
           # Find the blob by key - it should exist since upload is called after blob creation
           blob = ::ActiveStorage::Blob.find_by(key: key, service_name: service_name.to_s)
 
-          if blob
-            # Update the metadata column to include the file_id
-            # Use update_column to skip callbacks and validations
-            blob.update_column(:metadata, blob.metadata.merge('imagekit_file_id' => file_id))
-          end
+          # Update the metadata column to include the file_id
+          # Use update_column to skip callbacks and validations
+          blob&.update_column(:metadata, blob.metadata.merge('imagekit_file_id' => file_id))
         rescue StandardError => e
           # Log the error but don't fail the upload
           ::Rails.logger.warn("Failed to store ImageKit file_id for key #{key}: #{e.message}") if defined?(::Rails)
