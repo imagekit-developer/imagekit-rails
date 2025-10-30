@@ -3,28 +3,37 @@
 module Imagekit
   module Rails
     module Helper
-      # Generates an image tag with ImageKit URL transformations and responsive image support
+      # Generates an image tag with ImageKit URL transformations and responsive image support.
       #
-      # @param src [String, ActiveStorage::Attached::One] Required. The image path or Active Storage attachment
-      # @param options [Hash] Optional parameters for the image tag
-      # @option options [String] :url_endpoint The ImageKit URL endpoint (overrides config)
-      # @option options [Array<Hash>] :transformation Array of transformation objects
-      # @option options [Hash] :query_parameters Additional query parameters
-      # @option options [Boolean] :responsive Enable/disable responsive images (default: true)
-      # @option options [Array<Integer>] :device_breakpoints Device width breakpoints
-      # @option options [Array<Integer>] :image_breakpoints Image width breakpoints
-      # @option options [Symbol, String] :transformation_position :path or :query (default: :query)
+      # @param src [String, ActiveStorage::Attached] Image path or Active Storage attachment
+      # @param options [Hash] Image tag options
+      #
+      # @option options [String] :url_endpoint ImageKit URL endpoint (overrides config)
+      # @option options [Array<Hash>] :transformation Array of transformation objects.
+      #   See [Transformation docs](https://www.rubydoc.info/gems/imagekit/Imagekit/Models/Transformation) for all available parameters
+      # @option options [Hash{Symbol=>String}] :query_parameters Additional query parameters
+      # @option options [Symbol] :transformation_position Position for transformations - `:path` or `:query` (default: `:query`).
+      #   See [TransformationPosition](https://www.rubydoc.info/gems/imagekit/Imagekit/Models/TransformationPosition)
+      # @option options [Boolean] :signed Whether to generate a signed URL (default: `false`)
+      # @option options [Integer, Float] :expires_in Expiration time in seconds for signed URLs.
+      #   If specified, URL will always be signed. See [Signed URLs](https://docs.imagekit.io/features/security/signed-urls)
+      #
+      # @option options [Boolean] :responsive Enable/disable responsive images with `srcset` (default: `true`)
+      # @option options [Array<Integer>] :device_breakpoints Device width breakpoints for responsive images
+      # @option options [Array<Integer>] :image_breakpoints Image width breakpoints for responsive images
+      # @option options [String] :sizes Sizes attribute for responsive images (e.g., `"(max-width: 600px) 100vw, 800px"`)
+      #
       # @option options [String] :alt Alt text for the image
       # @option options [Integer, String] :width Width attribute for the img tag
       # @option options [Integer, String] :height Height attribute for the img tag
-      # @option options [String] :loading Loading attribute (lazy, eager)
+      # @option options [String] :loading Loading strategy - `"lazy"` (default) or `"eager"`
       # @option options [String] :class CSS classes
-      # @option options [Hash] :data Data attributes
-      # @option options [String] :sizes Sizes attribute for responsive images
-      # @option options [Boolean] :signed Whether to sign the URL
-      # @option options [Integer] :expires_in Expiration time in seconds for signed URLs
+      # @option options [Hash] :data Data attributes (e.g., `{ controller: "gallery", action: "click" }`)
       #
-      # @return [String] HTML image tag
+      # @return [String] HTML image tag with ImageKit URL
+      #
+      # @see https://www.rubydoc.info/gems/imagekit/Imagekit/Models/SrcOptions SrcOptions model
+      # @see #ik_video_tag
       #
       # @example Basic usage
       #   ik_image_tag("/path/to/image.jpg", alt: "My Image")
@@ -156,28 +165,34 @@ module Imagekit
         tag(:img, img_attributes)
       end
 
-      # Generates a video tag with ImageKit URL transformations
+      # Generates a video tag with ImageKit URL transformations.
       #
-      # @param src [String, ActiveStorage::Attached::One] Required. The video path or Active Storage attachment
-      # @param options [Hash] Optional parameters for the video tag
-      # @option options [String] :url_endpoint The ImageKit URL endpoint (overrides config)
-      # @option options [Array<Hash>] :transformation Array of transformation objects
-      # @option options [Hash] :query_parameters Additional query parameters
-      # @option options [Symbol, String] :transformation_position :path or :query (default: :query)
+      # @param src [String, ActiveStorage::Attached] Video path or Active Storage attachment
+      # @param options [Hash] Video tag options
+      #
+      # @option options [String] :url_endpoint ImageKit URL endpoint (overrides config)
+      # @option options [Array<Hash>] :transformation Array of transformation objects.
+      #   See [Transformation docs](https://www.rubydoc.info/gems/imagekit/Imagekit/Models/Transformation) for available parameters
+      # @option options [Hash{Symbol=>String}] :query_parameters Additional query parameters
+      # @option options [Symbol] :transformation_position Position for transformations - `:path` or `:query` (default: `:query`)
+      # @option options [Boolean] :signed Whether to generate a signed URL (default: `false`)
+      # @option options [Integer, Float] :expires_in Expiration time in seconds for signed URLs
+      #
       # @option options [Integer, String] :width Width attribute for the video tag
       # @option options [Integer, String] :height Height attribute for the video tag
       # @option options [String] :poster Poster image URL
-      # @option options [String] :preload Preload attribute (none, metadata, auto)
-      # @option options [Boolean] :controls Show video controls
-      # @option options [Boolean] :autoplay Autoplay the video
-      # @option options [Boolean] :loop Loop the video
-      # @option options [Boolean] :muted Mute the video
+      # @option options [String] :preload Preload strategy - `"none"`, `"metadata"`, or `"auto"`
+      # @option options [Boolean] :controls Show video controls (default: `false`)
+      # @option options [Boolean] :autoplay Autoplay the video (default: `false`)
+      # @option options [Boolean] :loop Loop the video (default: `false`)
+      # @option options [Boolean] :muted Mute the video (default: `false`)
       # @option options [String] :class CSS classes
       # @option options [Hash] :data Data attributes
-      # @option options [Boolean] :signed Whether to sign the URL
-      # @option options [Integer] :expires_in Expiration time in seconds for signed URLs
       #
-      # @return [String] HTML video tag
+      # @return [String] HTML video tag with ImageKit URL
+      #
+      # @see https://www.rubydoc.info/gems/imagekit/Imagekit/Models/SrcOptions SrcOptions model
+      # @see #ik_image_tag
       #
       # @example Basic usage
       #   ik_video_tag("/path/to/video.mp4", controls: true)
@@ -291,7 +306,11 @@ module Imagekit
 
       private
 
-      # Check if the object is an Active Storage attachment
+      # Check if the object is an Active Storage attachment.
+      #
+      # @api private
+      # @param obj [Object] Object to check
+      # @return [Boolean] `true` if object is an ActiveStorage::Attached::One instance
       def active_storage_attachment?(obj)
         return false unless defined?(::ActiveStorage)
         return false unless defined?(::ActiveStorage::Attached)

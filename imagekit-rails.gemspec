@@ -36,6 +36,9 @@ Gem::Specification.new do |s|
   # until it's published to RubyGems:
   #   gem 'imagekit', git: 'https://github.com/stainless-sdks/imagekit-ruby.git'
 
+  s.add_development_dependency 'redcarpet', '~> 3.6' # For markdown in YARD
   s.add_development_dependency 'rspec', '~> 3.0'
   s.add_development_dependency 'rubocop', '~> 1.21'
+  s.add_development_dependency 'webrick', '~> 1.8' # For YARD server
+  s.add_development_dependency 'yard', '~> 0.9'
 end
