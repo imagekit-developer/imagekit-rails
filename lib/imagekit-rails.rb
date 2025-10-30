@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require 'imagekit'
+require 'imagekitio'
 require_relative 'imagekit/rails/version'
 require_relative 'imagekit/rails/configuration'
 require_relative 'imagekit/rails/helper'

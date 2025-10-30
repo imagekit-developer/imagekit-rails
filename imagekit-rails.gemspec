@@ -32,9 +32,9 @@ Gem::Specification.new do |s|
 
   s.add_dependency 'rails', '>= 6.0'
 
-  # NOTE: imagekit gem must be added to the user's Gemfile from GitHub
+  # NOTE: imagekitio gem must be added to the user's Gemfile from GitHub
   # until it's published to RubyGems:
-  #   gem 'imagekit', git: 'https://github.com/stainless-sdks/imagekit-ruby.git'
+  #   gem 'imagekitio', git: 'https://github.com/imagekit-developer/imagekit-ruby.git', branch: 'next'
 
   s.add_development_dependency 'redcarpet', '~> 3.6' # For markdown in YARD
   s.add_development_dependency 'rspec', '~> 3.0'

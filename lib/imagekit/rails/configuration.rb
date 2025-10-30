@@ -54,10 +54,10 @@ module Imagekit
       # The client is initialized lazily and cached for reuse.
       # It uses the configured private_key.
       #
-      # @return [Imagekit::Client] The ImageKit SDK client
-      # @see https://www.rubydoc.info/gems/imagekit/Imagekit/Client ImageKit Client docs
+      # @return [Imagekitio::Client] The ImageKit SDK client
+      # @see https://www.rubydoc.info/gems/imagekitio/Imagekitio/Client ImageKit Client docs
       def client
-        @client ||= Imagekit::Client.new(
+        @client ||= Imagekitio::Client.new(
           private_key: private_key
         )
       end

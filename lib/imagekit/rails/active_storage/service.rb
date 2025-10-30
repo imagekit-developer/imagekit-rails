@@ -34,7 +34,7 @@ module Imagekit
           @public_key = public_key || config.public_key
           @private_key = private_key || config.private_key
 
-          @client = Imagekit::Client.new(
+          @client = Imagekitio::Client.new(
             private_key: @private_key
           )
         end
@@ -76,7 +76,7 @@ module Imagekit
             # Store the file_id in blob metadata for future deletion
             store_file_id_in_blob_metadata(key, response.file_id) if response.respond_to?(:file_id) && response.file_id
           end
-        rescue Imagekit::Errors::Error => e
+        rescue Imagekitio::Errors::Error => e
           raise ::ActiveStorage::IntegrityError, "Upload failed: #{e.message}"
         end
 
@@ -219,7 +219,7 @@ module Imagekit
               @client.files.get(file_id)
               payload[:exist] = true
               true
-            rescue Imagekit::Errors::Error => e
+            rescue Imagekitio::Errors::Error => e
               # File not found or other error
               payload[:exist] = false
               payload[:error] = e.message
@@ -252,7 +252,7 @@ module Imagekit
         # @private
         def url_for_key(key, transformation: nil)
           # The key is the complete file path in ImageKit
-          src_options = Imagekit::Models::SrcOptions.new(
+          src_options = Imagekitio::Models::SrcOptions.new(
             src: key,
             url_endpoint: @url_endpoint,
             transformation: transformation || []

@@ -3,7 +3,7 @@
 source 'https://rubygems.org'
 
 # ImageKit core gem from GitHub (not yet published to RubyGems)
-gem 'imagekit', git: 'https://github.com/stainless-sdks/imagekit-ruby.git'
+gem 'imagekitio', git: 'https://github.com/imagekit-developer/imagekit-ruby.git', branch: 'next'
 
 # Specify your gem's dependencies in imagekit-rails.gemspec
 gemspec

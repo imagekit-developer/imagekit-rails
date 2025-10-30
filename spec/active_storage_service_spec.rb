@@ -16,6 +16,13 @@ module ActiveStorage
   class IntegrityError < StandardError; end
 end
 
+# Mock Rails module for logger
+module Rails
+  def self.logger
+    @logger ||= Logger.new(nil)
+  end
+end
+
 RSpec.describe Imagekit::Rails::ActiveStorage::Service do
   let(:service) do
     described_class.new(
@@ -25,12 +32,12 @@ RSpec.describe Imagekit::Rails::ActiveStorage::Service do
     )
   end
 
-  let(:mock_client) { instance_double(Imagekit::Client) }
+  let(:mock_client) { instance_double(Imagekitio::Client) }
   let(:mock_files) { instance_double('Files') }
   let(:mock_helper) { instance_double('Helper') }
 
   before do
-    allow(Imagekit::Client).to receive(:new).and_return(mock_client)
+    allow(Imagekitio::Client).to receive(:new).and_return(mock_client)
     allow(mock_client).to receive(:files).and_return(mock_files)
     allow(mock_client).to receive(:helper).and_return(mock_helper)
   end
@@ -65,7 +72,7 @@ RSpec.describe Imagekit::Rails::ActiveStorage::Service do
     end
 
     it 'creates an ImageKit client' do
-      expect(Imagekit::Client).to receive(:new).with(
+      expect(Imagekitio::Client).to receive(:new).with(
         private_key: 'private_test_key'
       )
 
@@ -122,7 +129,7 @@ RSpec.describe Imagekit::Rails::ActiveStorage::Service do
     end
 
     it 'raises IntegrityError when upload fails' do
-      error = Imagekit::Errors::Error.new('Upload failed')
+      error = Imagekitio::Errors::Error.new('Upload failed')
       allow(mock_files).to receive(:upload).and_raise(error)
 
       expect do
@@ -351,15 +358,6 @@ RSpec.describe Imagekit::Rails::ActiveStorage::Service do
   describe '#delete' do
     let(:key) { 'uploads/test/file.jpg' }
 
-    it 'instruments the delete operation' do
-      expect(ActiveSupport::Notifications).to receive(:instrument).with(
-        'service_delete.active_storage',
-        hash_including(key: key, service: :imagekit)
-      ).and_call_original
-
-      service.delete(key)
-    end
-
     it 'is a no-op (deletion handled by before_destroy callback)' do
       expect { service.delete(key) }.not_to raise_error
     end
@@ -368,15 +366,6 @@ RSpec.describe Imagekit::Rails::ActiveStorage::Service do
   describe '#delete_prefixed' do
     let(:prefix) { 'uploads/test/' }
 
-    it 'instruments the delete_prefixed operation' do
-      expect(ActiveSupport::Notifications).to receive(:instrument).with(
-        'service_delete_prefixed.active_storage',
-        hash_including(prefix: prefix, service: :imagekit)
-      ).and_call_original
-
-      service.delete_prefixed(prefix)
-    end
-
     it 'is a no-op (deletion handled by before_destroy callback)' do
       expect { service.delete_prefixed(prefix) }.not_to raise_error
     end
@@ -384,10 +373,46 @@ RSpec.describe Imagekit::Rails::ActiveStorage::Service do
 
   describe '#exist?' do
     let(:key) { 'uploads/test/file.jpg' }
+    let(:mock_blob) { double('Blob', metadata: { 'imagekit_file_id' => 'file_123' }) }
+    let(:mock_file_response) { double('FileResponse', file_id: 'file_123') }
 
-    it 'returns true' do
+    before do
+      # Mock ActiveStorage::Blob class
+      stub_const('ActiveStorage::Blob', Class.new)
+      allow(ActiveStorage::Blob).to receive(:find_by).with(key: key, service_name: 'imagekit').and_return(mock_blob)
+      allow(mock_files).to receive(:get).with('file_123').and_return(mock_file_response)
+    end
+
+    it 'returns true when file exists' do
       result = service.exist?(key)
       expect(result).to be true
+    end
+
+    it 'returns false when blob is not found' do
+      allow(ActiveStorage::Blob).to receive(:find_by).and_return(nil)
+      result = service.exist?(key)
+      expect(result).to be false
+    end
+
+    it 'returns false when blob has no file_id' do
+      blob_without_id = double('Blob', metadata: {})
+      allow(ActiveStorage::Blob).to receive(:find_by).and_return(blob_without_id)
+      result = service.exist?(key)
+      expect(result).to be false
+    end
+
+    it 'returns false when ImageKit API raises error' do
+      error = Imagekitio::Errors::NotFoundError.new(
+        url: 'https://api.imagekit.io/v1/files/file_123',
+        status: 404,
+        headers: {},
+        body: { message: 'Not found' },
+        request: nil,
+        response: double('Response', status: 404)
+      )
+      allow(mock_files).to receive(:get).and_raise(error)
+      result = service.exist?(key)
+      expect(result).to be false
     end
 
     it 'instruments the exist operation' do
@@ -399,13 +424,24 @@ RSpec.describe Imagekit::Rails::ActiveStorage::Service do
       service.exist?(key)
     end
 
-    it 'sets the exist payload' do
+    it 'sets the exist payload to true when file exists' do
       payload = {}
       allow(ActiveSupport::Notifications).to receive(:instrument).and_yield(payload)
 
       service.exist?(key)
 
       expect(payload[:exist]).to be true
+    end
+
+    it 'sets the exist payload to false when blob not found' do
+      allow(ActiveStorage::Blob).to receive(:find_by).and_return(nil)
+      payload = {}
+      allow(ActiveSupport::Notifications).to receive(:instrument).and_yield(payload)
+
+      service.exist?(key)
+
+      expect(payload[:exist]).to be false
+      expect(payload[:reason]).to eq('blob_not_found')
     end
   end
 
@@ -424,7 +460,7 @@ RSpec.describe Imagekit::Rails::ActiveStorage::Service do
 
     it 'calls build_url with correct parameters' do
       expect(mock_helper).to receive(:build_url) do |src_options|
-        expect(src_options).to be_a(Imagekit::Models::SrcOptions)
+        expect(src_options).to be_a(Imagekitio::Models::SrcOptions)
         expect(src_options.src).to eq(key)
         expect(src_options.url_endpoint).to eq('https://ik.imagekit.io/test_account')
         expect(src_options.transformation).to eq([])

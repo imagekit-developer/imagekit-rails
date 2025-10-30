@@ -25,10 +25,10 @@ module Imagekit
       #
       # @option options [String] :url_endpoint ImageKit URL endpoint (overrides config)
       # @option options [Array<Hash>] :transformation Array of transformation objects.
-      #   See [Transformation docs](https://www.rubydoc.info/gems/imagekit/Imagekit/Models/Transformation) for all available parameters
+      #   See [Transformation docs](https://www.rubydoc.info/gems/imagekitio/Imagekitio/Models/Transformation) for all available parameters
       # @option options [Hash{Symbol=>String}] :query_parameters Additional query parameters
       # @option options [Symbol] :transformation_position Position for transformations - `:path` or `:query` (default: `:query`).
-      #   See [TransformationPosition](https://www.rubydoc.info/gems/imagekit/Imagekit/Models/TransformationPosition)
+      #   See [TransformationPosition](https://www.rubydoc.info/gems/imagekitio/Imagekitio/Models/TransformationPosition)
       # @option options [Boolean] :signed Whether to generate a signed URL (default: `false`)
       # @option options [Integer, Float] :expires_in Expiration time in seconds for signed URLs.
       #   If specified, URL will always be signed. See [Signed URLs](https://docs.imagekit.io/features/security/signed-urls)
@@ -47,7 +47,7 @@ module Imagekit
       #
       # @return [String] HTML image tag with ImageKit URL
       #
-      # @see https://www.rubydoc.info/gems/imagekit/Imagekit/Models/SrcOptions SrcOptions model
+      # @see https://www.rubydoc.info/gems/imagekitio/Imagekitio/Models/SrcOptions SrcOptions model
       # @see #ik_video_tag
       #
       # @example Basic usage
@@ -139,7 +139,7 @@ module Imagekit
 
         # Generate responsive image attributes if enabled
         if responsive && url_endpoint
-          responsive_options = Imagekit::Models::GetImageAttributesOptions.new(
+          responsive_options = Imagekitio::Models::GetImageAttributesOptions.new(
             src: src,
             url_endpoint: url_endpoint,
             width: width&.to_i,
@@ -163,7 +163,7 @@ module Imagekit
           img_attributes[:sizes] = sizes_value if sizes_value
         else
           # Non-responsive: just build a simple URL
-          src_options = Imagekit::Models::SrcOptions.new(
+          src_options = Imagekitio::Models::SrcOptions.new(
             src: src,
             url_endpoint: url_endpoint,
             transformation: transformation,
@@ -187,7 +187,7 @@ module Imagekit
       #
       # @option options [String] :url_endpoint ImageKit URL endpoint (overrides config)
       # @option options [Array<Hash>] :transformation Array of transformation objects.
-      #   See [Transformation docs](https://www.rubydoc.info/gems/imagekit/Imagekit/Models/Transformation) for available parameters
+      #   See [Transformation docs](https://www.rubydoc.info/gems/imagekitio/Imagekitio/Models/Transformation) for available parameters
       # @option options [Hash{Symbol=>String}] :query_parameters Additional query parameters
       # @option options [Symbol] :transformation_position Position for transformations - `:path` or `:query` (default: `:query`)
       # @option options [Boolean] :signed Whether to generate a signed URL (default: `false`)
@@ -206,7 +206,7 @@ module Imagekit
       #
       # @return [String] HTML video tag with ImageKit URL
       #
-      # @see https://www.rubydoc.info/gems/imagekit/Imagekit/Models/SrcOptions SrcOptions model
+      # @see https://www.rubydoc.info/gems/imagekitio/Imagekitio/Models/SrcOptions SrcOptions model
       # @see #ik_image_tag
       #
       # @example Basic usage
@@ -294,7 +294,7 @@ module Imagekit
         video_attributes.merge!(options)
 
         # Build video URL
-        src_options = Imagekit::Models::SrcOptions.new(
+        src_options = Imagekitio::Models::SrcOptions.new(
           src: src,
           url_endpoint: url_endpoint,
           transformation: transformation,
