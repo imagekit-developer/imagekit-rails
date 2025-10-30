@@ -360,7 +360,7 @@ RSpec.describe Imagekit::Rails::ActiveStorage::Service do
       service.delete(key)
     end
 
-    it 'does not raise an error (deletion not implemented)' do
+    it 'is a no-op (deletion handled by before_destroy callback)' do
       expect { service.delete(key) }.not_to raise_error
     end
   end
@@ -377,7 +377,7 @@ RSpec.describe Imagekit::Rails::ActiveStorage::Service do
       service.delete_prefixed(prefix)
     end
 
-    it 'does not raise an error (deletion not implemented)' do
+    it 'is a no-op (deletion handled by before_destroy callback)' do
       expect { service.delete_prefixed(prefix) }.not_to raise_error
     end
   end

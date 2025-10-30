@@ -27,20 +27,6 @@ Active Storage's built-in variant processing (e.g., `variant(resize_to_limit: [1
 <%= ik_image_tag(@user.avatar, transformation: [{ width: 200, height: 200 }]) %>
 ```
 
-### 3. **File Deletion Not Implemented**
-Files are **not automatically deleted** from ImageKit when you call `purge` or `purge_later`.
-
-- **Why**: ImageKit's deletion API requires a `file_id`, which Active Storage doesn't track.
-- **Impact**: Calling `@user.avatar.purge` will remove the database record but leave the file in ImageKit.
-- **Solution**: Manually delete files from the [ImageKit Media Library](https://imagekit.io/dashboard/media-library) or use the ImageKit API directly.
-
-### 4. **File Existence Checking Limited**
-The `exist?` method always returns `true` after upload.
-
-- **Why**: ImageKit requires listing or searching by file_id to check existence.
-- **Impact**: Active Storage won't detect if a file was manually deleted from ImageKit.
-- **Solution**: Files are validated during download; missing files will raise errors at that point.
-
 ## When to Use Active Storage with ImageKit
 
 **Good use cases:**
@@ -48,11 +34,11 @@ The `exist?` method always returns `true` after upload.
 - Leveraging Active Storage's model associations (`has_one_attached`, `has_many_attached`)
 - Using ImageKit's on-the-fly transformations via `ik_image_tag`
 - Migrating from local/S3 storage to ImageKit
+- Automatic file deletion when purging attachments
 
 **Not recommended for:**
 - Applications requiring browser-to-storage direct uploads
 - Heavy use of Active Storage variants
-- Applications requiring automatic file deletion
 
 ## Configuration
 
@@ -308,14 +294,24 @@ All file uploads go through your Rails server:
 
 ### Delete Files
 
-File deletion is not implemented. Calling `purge` or `purge_later` will remove the database record but leave the file in ImageKit.
+Files are automatically deleted from ImageKit when you purge attachments:
 
 ```ruby
-@user.avatar.purge        # Removes DB record only
-@user.avatar.purge_later  # Removes DB record only (in background)
+@user.avatar.purge        # Removes file from ImageKit and DB record
+@user.avatar.purge_later  # Same, but in background job
 ```
 
-To delete files from ImageKit, use the [ImageKit Media Library](https://imagekit.io/dashboard/media-library) dashboard or the ImageKit API directly (requires `file_id`).
+You can also configure dependent deletion in your models:
+
+```ruby
+class User < ApplicationRecord
+  has_one_attached :avatar, dependent: :purge_later
+  has_many_attached :photos, dependent: :purge_later
+end
+
+# When user is destroyed, all attachments are purged automatically
+@user.destroy
+```
 
 ## Advanced Usage
 
