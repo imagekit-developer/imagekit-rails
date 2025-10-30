@@ -1,6 +1,6 @@
 # Active Storage Integration
 
-The `imagekit-rails` gem provides integration with Active Storage, allowing you to store uploaded files directly in ImageKit and use them with ImageKit's transformation features.
+The `imagekitio-rails` gem provides integration with Active Storage, allowing you to store uploaded files directly in ImageKit and use them with ImageKit's transformation features.
 
 ## Important Limitations
 

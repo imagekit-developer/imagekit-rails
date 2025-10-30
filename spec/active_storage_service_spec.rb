@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 require 'spec_helper'
-require 'imagekit-rails'
+require 'imagekitio-rails'
 require 'active_support/notifications'
 require 'net/http'
 require 'imagekit/rails/active_storage/service'

@@ -21,7 +21,7 @@ If you'd like to use the repository from source, you can either install from git
 To install via git in your `Gemfile`:
 
 ```ruby
-gem "imagekit-rails", git: "https://www.github.com/imagekit-developer/imagekit-rails"
+gem "imagekitio-rails", git: "https://www.github.com/imagekit-developer/imagekit-rails"
 ```
 
 Alternatively, reference local copy of the repo:
@@ -31,7 +31,7 @@ $ git clone -- 'https://www.github.com/imagekit-developer/imagekit-rails' '<path
 ```
 
 ```ruby
-gem "imagekit-rails", path: "<path-to-repo>"
+gem "imagekitio-rails", path: "<path-to-repo>"
 ```
 
 ## Running tests

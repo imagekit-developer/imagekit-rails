@@ -16,7 +16,7 @@ require_relative 'imagekit/rails/railtie' if defined?(Rails::Railtie)
 
 # ImageKit Rails integration
 #
-# This is the top-level namespace for the ImageKit Ruby SDK. This gem (`imagekit-rails`)
+# This is the top-level namespace for the ImageKit Ruby SDK. This gem (`imagekitio-rails`)
 # provides Rails-specific integrations on top of the core SDK.
 #
 # ImageKit is a complete media management solution that provides:

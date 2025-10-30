@@ -2,7 +2,7 @@
 
 Rails view helpers and Active Storage integration for [ImageKit.io](https://imagekit.io).
 
-[![Gem Version](https://badge.fury.io/rb/imagekit-rails.svg)](https://badge.fury.io/rb/imagekit-rails)
+[![Gem Version](https://badge.fury.io/rb/imagekitio-rails.svg)](https://badge.fury.io/rb/imagekitio-rails)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 
 ## Features
@@ -20,7 +20,7 @@ Add to your `Gemfile`:
 
 ```ruby
 gem 'imagekitio', git: 'https://github.com/imagekit-developer/imagekit-ruby.git', branch: 'next'
-gem 'imagekit-rails'
+gem 'imagekitio-rails'
 ```
 
 ```bash

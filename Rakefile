@@ -33,7 +33,7 @@ task :release do
   FileList['*.gem'].each { |f| FileUtils.rm(f) }
 
   # Build gem
-  sh 'gem build imagekit-rails.gemspec'
+  sh 'gem build imagekitio-rails.gemspec'
 
   # Push to RubyGems
   gem_file = FileList['*.gem'].first

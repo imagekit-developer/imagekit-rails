@@ -3,7 +3,7 @@
 require_relative 'lib/imagekit/rails/version'
 
 Gem::Specification.new do |s|
-  s.name = 'imagekit-rails'
+  s.name = 'imagekitio-rails'
   s.version = Imagekit::Rails::VERSION
   s.summary = 'ImageKit Rails integration with view helpers and Active Storage support'
   s.description = 'Comprehensive Rails integration for ImageKit.io with view helpers (ik_image_tag, ik_video_tag) and Active Storage service adapter. Provides easy image optimization, transformation, and responsive image support.'

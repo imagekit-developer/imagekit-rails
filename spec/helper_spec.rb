@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 require 'spec_helper'
-require 'imagekit-rails'
+require 'imagekitio-rails'
 
 RSpec.describe Imagekit::Rails::Helper do
   include Imagekit::Rails::Helper

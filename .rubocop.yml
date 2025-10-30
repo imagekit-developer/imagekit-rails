@@ -3,24 +3,24 @@ AllCops:
   TargetRubyVersion: 3.2
   SuggestExtensions: false
 
-# Disable filename check since imagekit-rails.rb is intentional
+# Disable filename check since imagekitio-rails.rb is intentional
 Naming/FileName:
   Exclude:
-    - 'lib/imagekit-rails.rb'
+    - 'lib/imagekitio-rails.rb'
 
 # Allow longer lines in specs for readability
 Layout/LineLength:
   Max: 150
   Exclude:
     - 'spec/**/*'
-    - 'imagekit-rails.gemspec'
+    - 'imagekitio-rails.gemspec'
 
 # Allow longer blocks in specs
 Metrics/BlockLength:
   Exclude:
     - 'spec/**/*'
     - 'Rakefile'
-    - 'imagekit-rails.gemspec'
+    - 'imagekitio-rails.gemspec'
 
 # Allow longer methods for the two main helper methods and Active Storage service
 Metrics/MethodLength:

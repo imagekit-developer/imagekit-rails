@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 require 'bundler/setup'
-require 'imagekit-rails'
+require 'imagekitio-rails'
 require 'action_view'
 
 RSpec.configure do |config|

@@ -17,9 +17,9 @@ echo "==> Cleaning old gems"
 find . -maxdepth 1 -type f -name "*.gem" -delete
 
 echo "==> Building gem"
-gem build imagekit-rails.gemspec
+gem build imagekitio-rails.gemspec
 
 echo "==> Publishing to RubyGems"
-gem push imagekit-rails-*.gem
+gem push imagekitio-rails-*.gem
 
 echo "==> Done!"
