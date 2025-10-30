@@ -13,20 +13,6 @@ Active Storage's built-in "Direct Upload" feature (browser-to-storage uploads) i
 - **Impact**: All file uploads must go through your Rails server (standard Active Storage workflow).
 - **Workaround**: Use standard file uploads as shown in this guide. For advanced use cases, you can implement custom JavaScript using ImageKit's Upload API directly.
 
-### 2. **Variants Are Not Supported**
-Active Storage's built-in variant processing (e.g., `variant(resize_to_limit: [100, 100])`) should **not be used** with ImageKit.
-
-- **Why**: Active Storage variants trigger server-side image processing and generate URLs like `/rails/active_storage/representations/...`. When you call `.variant()`, Active Storage attempts to download the file from ImageKit, process it locally, and upload the variant back to ImageKit - this is inefficient and unnecessary.
-- **Solution**: Use ImageKit's on-the-fly transformations via `ik_image_tag` instead. ImageKit applies transformations in real-time via CDN without any server processing or additional uploads.
-
-```erb
-<!-- Don't do this: -->
-<%= image_tag @user.avatar.variant(resize_to_limit: [200, 200]) %>
-
-<!-- Do this instead: -->
-<%= ik_image_tag(@user.avatar, transformation: [{ width: 200, height: 200 }]) %>
-```
-
 ## When to Use Active Storage with ImageKit
 
 **Good use cases:**
@@ -38,7 +24,6 @@ Active Storage's built-in variant processing (e.g., `variant(resize_to_limit: [1
 
 **Not recommended for:**
 - Applications requiring browser-to-storage direct uploads
-- Heavy use of Active Storage variants
 
 ## Configuration
 
@@ -133,7 +118,9 @@ end
 
 ### Displaying Images with Transformations
 
-Always use `ik_image_tag` instead of Rails' `image_tag` to leverage ImageKit's transformations:
+Always use `ik_image_tag` instead of Rails' `image_tag` to leverage ImageKit's transformations. 
+
+**Note:** Avoid using Active Storage's `.variant()` method with ImageKit. While variants technically work, they're inefficient - they download the original from ImageKit, process it on your server, and re-upload the result. Use ImageKit's real-time transformations instead:
 
 ```erb
 <!-- Basic usage -->
@@ -317,7 +304,7 @@ end
 
 ### Migrating from Variants
 
-If you're migrating from local/S3 storage and using variants, convert them to ImageKit transformations:
+If you're migrating from local/S3 storage and currently using variants, you should convert them to ImageKit transformations for better performance. Variants will still work with ImageKit, but they're inefficient (download → process → re-upload) compared to ImageKit's real-time transformations:
 
 ```erb
 <!-- Before (local/S3 storage with variants) -->
@@ -325,7 +312,7 @@ If you're migrating from local/S3 storage and using variants, convert them to Im
 <%= image_tag @photo.variant(resize_to_limit: [800, 600]) %>
 <%= image_tag @avatar.variant(resize_and_pad: [200, 200, background: [255, 255, 255]]) %>
 
-<!-- After (ImageKit transformations) -->
+<!-- After (ImageKit transformations - instant, no server processing) -->
 <%= ik_image_tag(@photo, transformation: [{ width: 400, height: 300, crop: :fill }]) %>
 <%= ik_image_tag(@photo, transformation: [{ width: 800, height: 600 }]) %>
 <%= ik_image_tag(@avatar, transformation: [{ 
