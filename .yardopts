@@ -4,8 +4,7 @@
 --exclude tmp
 --readme README.md
 --output-dir doc
---protected
---private
+--no-private
 lib/**/*.rb
 - ACTIVE_STORAGE.md
 - CONTRIBUTING.md

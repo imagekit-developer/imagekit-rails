@@ -43,7 +43,10 @@ module Imagekit
         #
         # @param key [String] The complete path for the file in ImageKit (e.g., "uploads/abc123xyz")
         # @param io [IO] The file content to upload
-        # @param checksum [String] Optional MD5 checksum for integrity verification
+        # @param checksum [String, nil] Optional MD5 checksum for integrity verification
+        # @param filename [String, nil] Optional filename to use
+        # @return [void]
+        # @raise [ActiveStorage::IntegrityError] If upload fails
         def upload(key, io, checksum: nil, filename: nil, **)
           instrument :upload, key: key, checksum: checksum do
             # Read the file content
@@ -77,7 +80,9 @@ module Imagekit
         # Download file content from ImageKit
         #
         # @param key [String] The unique identifier for the file
-        # @param &block [Block] Optional block to stream the content
+        # @yield [chunk] Streams file content in chunks if block given
+        # @yieldparam chunk [String] A chunk of the file content
+        # @return [String, void] The complete file content if no block given, void if block given
         def download(key, &block)
           if block_given?
             instrument :streaming_download, key: key do
@@ -107,7 +112,10 @@ module Imagekit
         # @param key [String] The unique identifier for the file
         # @param checksum [String] The expected checksum (ignored for ImageKit)
         # @param name [String, Array] Basename for the temporary file (can be string or [basename, extension])
-        # @param tmpdir [String] Directory for the temporary file
+        # @param tmpdir [String, nil] Directory for the temporary file
+        # @yield [tempfile] Provides access to the downloaded file
+        # @yieldparam tempfile [Tempfile] The temporary file containing downloaded content
+        # @return [void]
         def open(key, checksum:, name: 'ActiveStorage-', tmpdir: nil, **)
           instrument :open, key: key, checksum: checksum do
             # Create a temporary file to download into
@@ -135,6 +143,7 @@ module Imagekit
         #
         # @param key [String] The unique identifier for the file
         # @param range [Range] The byte range to download
+        # @return [String] The requested chunk of file content
         def download_chunk(key, range)
           instrument :download_chunk, key: key, range: range do
             url = url_for_key(key)
@@ -152,6 +161,9 @@ module Imagekit
         # Delete a file from ImageKit
         #
         # @param key [String] The unique identifier for the file
+        # @return [void]
+        # @note Currently not implemented. Files can be manually deleted from ImageKit dashboard.
+        #   ImageKit requires file_id for deletion, which would require searching for the file first.
         def delete(key)
           instrument :delete, key: key do
             # TODO: ImageKit requires file_id to delete files
@@ -164,6 +176,9 @@ module Imagekit
         # Delete multiple files from ImageKit
         #
         # @param prefix [String] The prefix path to delete
+        # @return [void]
+        # @note Currently not implemented. Files can be manually deleted from ImageKit dashboard.
+        #   Bulk deletion would require listing files first and then deleting each by file_id.
         def delete_prefixed(prefix)
           instrument :delete_prefixed, prefix: prefix do
             # TODO: ImageKit requires file_id to delete files
@@ -191,7 +206,9 @@ module Imagekit
         # Generate a URL for the file
         #
         # @param key [String] The unique identifier for the file
-        # @param transformation [Array<Hash>] ImageKit transformations
+        # @param transformation [Array<Hash>, nil] ImageKit transformations
+        # @return [String] The generated URL for the file
+        # @see https://www.rubydoc.info/gems/imagekit/Imagekit/Models/Transformation Transformation options
         def url(key, transformation: nil, **)
           instrument :url, key: key do |payload|
             generated_url = url_for_key(key, transformation: transformation)
@@ -202,6 +219,12 @@ module Imagekit
 
         private
 
+        # Build a URL for a file key with optional transformations
+        #
+        # @param key [String] The file path in ImageKit
+        # @param transformation [Array<Hash>, nil] Optional transformations
+        # @return [String] The complete ImageKit URL
+        # @private
         def url_for_key(key, transformation: nil)
           # The key is the complete file path in ImageKit
           src_options = Imagekit::Models::SrcOptions.new(
@@ -213,6 +236,13 @@ module Imagekit
           @client.helper.build_url(src_options)
         end
 
+        # Stream file content in chunks
+        #
+        # @param key [String] The file path in ImageKit
+        # @yield [chunk] Yields each chunk of the file content
+        # @yieldparam chunk [String] A chunk of file content
+        # @return [void]
+        # @private
         def stream(key, &block)
           url = url_for_key(key)
           uri = URI(url)
@@ -225,6 +255,13 @@ module Imagekit
           end
         end
 
+        # Instrument an operation for Active Support notifications
+        #
+        # @param operation [Symbol] The operation name (e.g., :upload, :download)
+        # @param payload [Hash] Additional data to include in the notification
+        # @yield Block to execute with instrumentation
+        # @return [Object] The result of the yielded block
+        # @private
         def instrument(operation, payload = {}, &block)
           ActiveSupport::Notifications.instrument(
             "service_#{operation}.active_storage",
@@ -233,6 +270,10 @@ module Imagekit
           )
         end
 
+        # Return the service name for Active Storage instrumentation
+        #
+        # @return [Symbol] The service name (:imagekit)
+        # @private
         def service_name
           :imagekit
         end

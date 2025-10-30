@@ -2,6 +2,21 @@
 
 module Imagekit
   module Rails
+    # View helpers for generating ImageKit image and video tags
+    #
+    # This module provides Rails view helpers that generate `<img>` and `<video>` tags
+    # with ImageKit URLs, including transformations, responsive images, and signed URLs.
+    #
+    # These helpers are automatically included in all Rails views and controllers
+    # when the gem is loaded (via the Railtie), so you can use them directly without
+    # any additional setup.
+    #
+    # @example Using in views (automatically available)
+    #   <%= ik_image_tag("/photo.jpg", width: 400) %>
+    #   <%= ik_video_tag("/video.mp4", controls: true) %>
+    #
+    # @see #ik_image_tag
+    # @see #ik_video_tag
     module Helper
       # Generates an image tag with ImageKit URL transformations and responsive image support.
       #
