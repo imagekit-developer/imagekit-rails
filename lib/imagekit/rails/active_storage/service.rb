@@ -47,6 +47,8 @@ module Imagekit
         # @param filename [String, nil] Optional filename to use
         # @return [void]
         # @raise [ActiveStorage::IntegrityError] If upload fails
+        # @note The ImageKit file_id is automatically stored in the blob's metadata after successful upload.
+        #   This enables automatic deletion when the blob is purged.
         def upload(key, io, checksum: nil, filename: nil, **)
           instrument :upload, key: key, checksum: checksum do
             # Read the file content
@@ -69,9 +71,10 @@ module Imagekit
             upload_params[:folder] = folder_path unless folder_path == '.'
 
             # Upload to ImageKit - the key determines the full path
-            @client.files.upload(**upload_params)
+            response = @client.files.upload(**upload_params)
 
-            # Active Storage doesn't use the response, it tracks files by the key parameter
+            # Store the file_id in blob metadata for future deletion
+            store_file_id_in_blob_metadata(key, response.file_id) if response.respond_to?(:file_id) && response.file_id
           end
         rescue Imagekit::Errors::Error => e
           raise ::ActiveStorage::IntegrityError, "Upload failed: #{e.message}"
@@ -162,14 +165,32 @@ module Imagekit
         #
         # @param key [String] The unique identifier for the file
         # @return [void]
-        # @note Currently not implemented. Files can be manually deleted from ImageKit dashboard.
-        #   ImageKit requires file_id for deletion, which would require searching for the file first.
+        # @note Requires the imagekit_file_id to be stored in blob metadata during upload.
+        #   If file_id is not available in metadata, deletion will be skipped with a warning.
         def delete(key)
-          instrument :delete, key: key do
-            # TODO: ImageKit requires file_id to delete files
-            # We would need to search for the file first to get its file_id
-            # For now, deletion is not implemented
-            # Files can be manually deleted from ImageKit dashboard
+          instrument :delete, key: key do |payload|
+            # Try to get the file_id from blob metadata
+            # This requires that the blob metadata was properly stored during upload
+            blob = find_blob_by_key(key)
+
+            if blob && blob.metadata['imagekit_file_id']
+              file_id = blob.metadata['imagekit_file_id']
+
+              begin
+                @client.files.delete(file_id)
+                payload[:deleted] = true
+              rescue Imagekit::Errors::Error => e
+                # Log the error but don't raise - file might already be deleted
+                Rails.logger.warn("ImageKit deletion failed for key #{key}, file_id #{file_id}: #{e.message}") if defined?(Rails)
+                payload[:deleted] = false
+                payload[:error] = e.message
+              end
+            else
+              # File ID not found in metadata - skip deletion
+              Rails.logger.warn("Cannot delete ImageKit file for key #{key}: file_id not found in blob metadata") if defined?(Rails)
+              payload[:deleted] = false
+              payload[:error] = 'file_id not found in metadata'
+            end
           end
         end
 
@@ -177,14 +198,35 @@ module Imagekit
         #
         # @param prefix [String] The prefix path to delete
         # @return [void]
-        # @note Currently not implemented. Files can be manually deleted from ImageKit dashboard.
-        #   Bulk deletion would require listing files first and then deleting each by file_id.
+        # @note Deletes all blobs whose keys start with the given prefix.
+        #   Requires imagekit_file_id to be stored in each blob's metadata.
         def delete_prefixed(prefix)
-          instrument :delete_prefixed, prefix: prefix do
-            # TODO: ImageKit requires file_id to delete files
-            # Bulk deletion would require listing files first and then deleting each by file_id
-            # For now, deletion is not implemented
-            # Files can be manually deleted from ImageKit dashboard
+          instrument :delete_prefixed, prefix: prefix do |payload|
+            deleted_count = 0
+            failed_count = 0
+
+            # Find all blobs with keys starting with the prefix
+            blobs = find_blobs_by_prefix(prefix)
+
+            blobs.each do |blob|
+              if blob.metadata['imagekit_file_id']
+                file_id = blob.metadata['imagekit_file_id']
+
+                begin
+                  @client.files.delete(file_id)
+                  deleted_count += 1
+                rescue Imagekit::Errors::Error => e
+                  Rails.logger.warn("ImageKit deletion failed for key #{blob.key}, file_id #{file_id}: #{e.message}") if defined?(Rails)
+                  failed_count += 1
+                end
+              else
+                Rails.logger.warn("Cannot delete ImageKit file for key #{blob.key}: file_id not found in metadata") if defined?(Rails)
+                failed_count += 1
+              end
+            end
+
+            payload[:deleted_count] = deleted_count
+            payload[:failed_count] = failed_count
           end
         end
 
@@ -192,14 +234,31 @@ module Imagekit
         #
         # @param key [String] The unique identifier for the file
         # @return [Boolean]
+        # @note Makes an API call to ImageKit to verify the file exists.
+        #   Requires the imagekit_file_id to be stored in blob metadata.
         def exist?(key)
           instrument :exist, key: key do |payload|
-            # TODO: ImageKit requires searching by file_id or listing files
-            # For now, we assume files exist after successful upload
-            # Active Storage will handle missing files via download errors
-            answer = true
-            payload[:exist] = answer
-            answer
+            blob = find_blob_by_key(key)
+
+            # If blob doesn't exist or has no file_id, file doesn't exist
+            unless blob&.metadata&.key?('imagekit_file_id')
+              payload[:exist] = false
+              return false
+            end
+
+            file_id = blob.metadata['imagekit_file_id']
+
+            begin
+              # Try to get file details from ImageKit
+              @client.files.get(file_id)
+              payload[:exist] = true
+              true
+            rescue Imagekit::Errors::Error => e
+              # File not found or other error
+              payload[:exist] = false
+              payload[:error] = e.message
+              false
+            end
           end
         end
 
@@ -276,6 +335,60 @@ module Imagekit
         # @private
         def service_name
           :imagekit
+        end
+
+        # Find a blob by its key
+        #
+        # @param key [String] The blob key
+        # @return [ActiveStorage::Blob, nil] The blob or nil if not found
+        # @private
+        def find_blob_by_key(key)
+          return nil unless defined?(::ActiveStorage::Blob)
+
+          ::ActiveStorage::Blob.find_by(key: key, service_name: service_name.to_s)
+        end
+
+        # Find all blobs with keys starting with the given prefix
+        #
+        # @param prefix [String] The key prefix
+        # @return [ActiveRecord::Relation<ActiveStorage::Blob>] The matching blobs
+        # @private
+        def find_blobs_by_prefix(prefix)
+          return [] unless defined?(::ActiveStorage::Blob)
+
+          ::ActiveStorage::Blob.where(service_name: service_name.to_s)
+                               .where('key LIKE ?', "#{sanitize_sql_like(prefix)}%")
+        end
+
+        # Sanitize string for use in SQL LIKE pattern
+        #
+        # @param string [String] The string to sanitize
+        # @return [String] The sanitized string
+        # @private
+        def sanitize_sql_like(string)
+          string.gsub(/[\\_%]/) { |match| "\\#{match}" }
+        end
+
+        # Store the ImageKit file_id in the blob's metadata
+        #
+        # @param key [String] The blob key
+        # @param file_id [String] The ImageKit file_id
+        # @return [void]
+        # @private
+        def store_file_id_in_blob_metadata(key, file_id)
+          return unless defined?(::ActiveStorage::Blob)
+
+          # Find the blob by key - it should exist since upload is called after blob creation
+          blob = ::ActiveStorage::Blob.find_by(key: key, service_name: service_name.to_s)
+
+          if blob
+            # Update the metadata column to include the file_id
+            # Use update_column to skip callbacks and validations
+            blob.update_column(:metadata, blob.metadata.merge('imagekit_file_id' => file_id))
+          end
+        rescue StandardError => e
+          # Log the error but don't fail the upload
+          ::Rails.logger.warn("Failed to store ImageKit file_id for key #{key}: #{e.message}") if defined?(::Rails)
         end
       end
     end
