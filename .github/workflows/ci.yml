@@ -9,6 +9,7 @@ jobs:
     timeout-minutes: 10
     name: Lint
     runs-on: ubuntu-latest
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork
 
     steps:
       - uses: actions/checkout@v4
@@ -16,7 +17,10 @@ jobs:
       - name: Set up Ruby
         uses: ruby/setup-ruby@v1
         with:
-          bundler-cache: true
+          bundler-cache: false
+      
+      - run: |
+          bundle install
       
       - name: Run lints
         run: ./scripts/lint
@@ -25,6 +29,7 @@ jobs:
     timeout-minutes: 10
     name: Test
     runs-on: ubuntu-latest
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork
     
     steps:
       - uses: actions/checkout@v4
@@ -32,7 +37,10 @@ jobs:
       - name: Set up Ruby
         uses: ruby/setup-ruby@v1
         with:
-          bundler-cache: true
+          bundler-cache: false
+      
+      - run: |
+          bundle install
       
       - name: Run tests
         run: ./scripts/test
@@ -41,6 +49,7 @@ jobs:
     timeout-minutes: 10
     name: Documentation
     runs-on: ubuntu-latest
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork
     
     steps:
       - uses: actions/checkout@v4
@@ -48,7 +57,10 @@ jobs:
       - name: Set up Ruby
         uses: ruby/setup-ruby@v1
         with:
-          bundler-cache: true
+          bundler-cache: false
+      
+      - run: |
+          bundle install
       
       - name: Generate documentation
         run: bundle exec yard doc
