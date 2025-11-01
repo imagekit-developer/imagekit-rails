@@ -19,7 +19,6 @@ Rails view helpers and Active Storage integration for [ImageKit.io](https://imag
 Add to your `Gemfile`:
 
 ```ruby
-gem 'imagekitio', git: 'https://github.com/imagekit-developer/imagekit-ruby.git', branch: 'next'
 gem 'imagekitio-rails'
 ```
 
@@ -27,7 +26,7 @@ gem 'imagekitio-rails'
 bundle install
 ```
 
-**Note:** The `imagekitio` gem is required but not yet published to RubyGems.
+This will automatically install the required `imagekitio` core SDK (version 4.x) as a dependency.
 
 ## Configuration
 
