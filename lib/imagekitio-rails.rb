@@ -29,7 +29,7 @@ require_relative 'imagekit/rails/railtie' if defined?(Rails::Railtie)
 # @see Imagekit::Rails Rails integration
 # @see https://imagekit.io ImageKit.io homepage
 # @see https://github.com/imagekit-developer/imagekit-ruby ImageKit Ruby SDK
-# @see https://docs.imagekit.io ImageKit documentation
+# @see https://imagekit.io/docs ImageKit documentation
 module Imagekit
   # Rails integration for ImageKit
   #

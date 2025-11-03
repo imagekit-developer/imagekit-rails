@@ -24,8 +24,6 @@ Gem::Specification.new do |s|
     'SUMMARY.md',
     'QUICKSTART.md',
     'API.md',
-    'ACTIVE_STORAGE.md',
-    'CHANGELOG.md',
     'CONTRIBUTING.md'
   ]
   s.extra_rdoc_files = ['README.md']

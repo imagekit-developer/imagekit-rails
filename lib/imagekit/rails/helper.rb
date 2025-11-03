@@ -31,7 +31,7 @@ module Imagekit
       #   See [TransformationPosition](https://www.rubydoc.info/gems/imagekitio/Imagekitio/Models/TransformationPosition)
       # @option options [Boolean] :signed Whether to generate a signed URL (default: `false`)
       # @option options [Integer, Float] :expires_in Expiration time in seconds for signed URLs.
-      #   If specified, URL will always be signed. See [Signed URLs](https://docs.imagekit.io/features/security/signed-urls)
+      #   If specified, URL will always be signed. See [Signed URLs](https://imagekit.io/docs/media-delivery-basic-security#how-to-generate-signed-urls)
       #
       # @option options [Boolean] :responsive Enable/disable responsive images with `srcset` (default: `true`)
       # @option options [Array<Integer>] :device_breakpoints Device width breakpoints for responsive images
