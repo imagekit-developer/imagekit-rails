@@ -233,7 +233,7 @@ module Imagekit
         # @param key [String] The unique identifier for the file
         # @param transformation [Array<Hash>, nil] ImageKit transformations
         # @return [String] The generated URL for the file
-        # @see https://www.rubydoc.info/gems/imagekit/Imagekit/Models/Transformation Transformation options
+        # @see https://www.gemdocs.org/gems/imagekitio/4.0.0/Imagekitio/Models/Transformation.html Transformation options
         def url(key, transformation: nil, **)
           instrument :url, key: key do |payload|
             generated_url = url_for_key(key, transformation: transformation)

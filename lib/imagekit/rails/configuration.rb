@@ -55,7 +55,7 @@ module Imagekit
       # It uses the configured private_key.
       #
       # @return [Imagekitio::Client] The ImageKit SDK client
-      # @see https://www.rubydoc.info/gems/imagekitio/Imagekitio/Client ImageKit Client docs
+      # @see https://www.gemdocs.org/gems/imagekitio/4.0.0/Imagekitio/Client.html ImageKit Client docs
       def client
         @client ||= Imagekitio::Client.new(
           private_key: private_key

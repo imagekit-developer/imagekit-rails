@@ -25,10 +25,10 @@ module Imagekit
       #
       # @option options [String] :url_endpoint ImageKit URL endpoint (overrides config)
       # @option options [Array<Hash>] :transformation Array of transformation objects.
-      #   See [Transformation docs](https://www.rubydoc.info/gems/imagekitio/Imagekitio/Models/Transformation) for all available parameters
+      #   See [Transformation docs](https://www.gemdocs.org/gems/imagekitio/4.0.0/Imagekitio/Models/Transformation.html) for all available parameters
       # @option options [Hash{Symbol=>String}] :query_parameters Additional query parameters
       # @option options [Symbol] :transformation_position Position for transformations - `:path` or `:query` (default: `:query`).
-      #   See [TransformationPosition](https://www.rubydoc.info/gems/imagekitio/Imagekitio/Models/TransformationPosition)
+      #   See [TransformationPosition](https://www.gemdocs.org/gems/imagekitio/4.0.0/Imagekitio/Models/TransformationPosition.html)
       # @option options [Boolean] :signed Whether to generate a signed URL (default: `false`)
       # @option options [Integer, Float] :expires_in Expiration time in seconds for signed URLs.
       #   If specified, URL will always be signed. See [Signed URLs](https://imagekit.io/docs/media-delivery-basic-security#how-to-generate-signed-urls)
@@ -47,7 +47,7 @@ module Imagekit
       #
       # @return [String] HTML image tag with ImageKit URL
       #
-      # @see https://www.rubydoc.info/gems/imagekitio/Imagekitio/Models/SrcOptions SrcOptions model
+      # @see https://www.gemdocs.org/gems/imagekitio/4.0.0/Imagekitio/Models/SrcOptions.html SrcOptions model
       # @see #ik_video_tag
       #
       # @example Basic usage
@@ -187,7 +187,7 @@ module Imagekit
       #
       # @option options [String] :url_endpoint ImageKit URL endpoint (overrides config)
       # @option options [Array<Hash>] :transformation Array of transformation objects.
-      #   See [Transformation docs](https://www.rubydoc.info/gems/imagekitio/Imagekitio/Models/Transformation) for available parameters
+      #   See [Transformation docs](https://www.gemdocs.org/gems/imagekitio/4.0.0/Imagekitio/Models/Transformation.html) for available parameters
       # @option options [Hash{Symbol=>String}] :query_parameters Additional query parameters
       # @option options [Symbol] :transformation_position Position for transformations - `:path` or `:query` (default: `:query`)
       # @option options [Boolean] :signed Whether to generate a signed URL (default: `false`)
@@ -206,7 +206,7 @@ module Imagekit
       #
       # @return [String] HTML video tag with ImageKit URL
       #
-      # @see https://www.rubydoc.info/gems/imagekitio/Imagekitio/Models/SrcOptions SrcOptions model
+      # @see https://www.gemdocs.org/gems/imagekitio/4.0.0/Imagekitio/Models/SrcOptions.html SrcOptions model
       # @see #ik_image_tag
       #
       # @example Basic usage

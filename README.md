@@ -64,7 +64,7 @@ Get your credentials from [ImageKit Dashboard → API Keys](https://imagekit.io/
 - **[Ruby SDK](https://imagekit.io/docs/integration/ruby)** - Core SDK for non-Rails applications
 - **[Transformation Reference](https://imagekit.io/docs/transformations)** - All available transformation options
 - **[API Reference](https://imagekit.io/docs/api-reference)** - Complete REST API documentation
-- **[RubyDoc](https://rubydoc.info/gems/imagekitio-rails)** - Gem API documentation
+- **[RubyDoc](https://gemdocs.org/gems/imagekitio-rails)** - Gem API documentation
 
 ## Support
 
